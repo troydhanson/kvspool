@@ -1,0 +1,10 @@
+Changes
+KVSpool.xs
+Makefile.PL
+MANIFEST
+ppport.h
+README
+t/KVSpool.t
+fallback/const-c.inc
+fallback/const-xs.inc
+lib/KVSpool.pm

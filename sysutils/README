@@ -1,0 +1,6 @@
+These utilities should eventually be moved out of the kvspool source tree.
+They're here for now because they're sometimes useful with kvspool-based
+applications, particularly pm and ramdisk.
+
+Note that pm (process manager) should be renamed because its name collides with
+the kernel pm (power management) daemon.

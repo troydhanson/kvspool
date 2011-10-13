@@ -1,0 +1,24 @@
+file spool.**********.***-*.sr, len 4
+file spool.**********.***-*.sp, len 65
+spooling second frame
+file spool.**********.***-*.sr, len 4
+file spool.**********.***-*.sp, len 122
+clear set
+reading from spool
+reader read frame:
+ key [hello], val [again]
+ key [second], val [life]
+reader read frame:
+ key [hello], val [again]
+ key [second], val [time]
+kv_spool_read returned 0
+resetting the spool directory for another round of reading
+reader read frame:
+ key [hello], val [again]
+ key [second], val [life]
+reader read frame:
+ key [hello], val [again]
+ key [second], val [time]
+kv_spool_read returned 0
+file spool.**********.***-*.sr, len 4
+file spool.**********.***-*.sp, len 122

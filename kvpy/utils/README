@@ -1,0 +1,5 @@
+These scripts exercise the kvpy module which reads key-value spools within Python.
+
+read.py    : tries to read one frame from the spool subdirectory (non-blocking)
+read_all.py: tries to read all frames from the spool subdirectory (blocking)
+runtest.sh : invokes another utility to write a frame to the spool then runs read.py

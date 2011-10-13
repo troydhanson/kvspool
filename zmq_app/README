@@ -1,0 +1,13 @@
+kvz is a sample or template application which consumes a spool
+but does not have any application specific logic (that is why 
+it is a template - you're supposed to fill in application logic).
+
+kvz is a C program that implements a ZeroMQ based main loop, which
+polls on ZeroMQ messages from either the spool reader thread or
+the control port thread. Thus, it can be connected to using 
+zcon and tested interactively using the 'help' commands etc.
+
+A real application would fill in logic in the zmq_poll section
+to handle the specific application's spool data and would add new
+application-specific commands to kvz_cmds.c.
+
