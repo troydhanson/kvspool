@@ -23,10 +23,6 @@ void kv_set_clear(void*_set) {
     HASH_DEL(set->kvs, kv);
     free(kv->key); free(kv->val); free(kv);
   }
-  if (set->base) {
-    free(set->base);
-    set->base=NULL;
-  }
   if (set->img || set->len) {
     assert(set->img && set->len);
     free(set->img); set->img=NULL;
@@ -51,8 +47,8 @@ void kv_set_dump(void*_set,FILE *out) {
       case 'b': fprintf(out,"(buffer of length %u)",kv->vlen); break;
       case 'n': fprintf(out,"%u",(uint32_t)(*(uint16_t*)kv->val)); break;
       case 'm': fprintf(out,"%d",( int32_t)(*( int16_t*)kv->val)); break;
-      case 'U': fprintf(out,"%lu",*(uint64_t*)kv->val); break;
-      case 'D': fprintf(out,"%ld",*( int64_t*)kv->val); break;
+      case 'U': fprintf(out,"%lu",*(long*)kv->val); break;
+      case 'D': fprintf(out,"%ld",*(long*)kv->val); break;
       case 'f': fprintf(out,"%f",*( double*)kv->val); break;
       default:  fprintf(out,"unknown format conversion '%c'", kv->fmt); break;
     }
@@ -69,18 +65,12 @@ void kv_set_free(void*_set) {
     free(kv);
   }
   assert(set->kvs == NULL);
-  if (set->base) free(set->base);
   if (set->img || set->len) {
     assert(set->img && set->len);
     free(set->img);
     set->len=0;
   }
   free(set);
-}
-
-char *kv_set_base(void*_set) {
-  kvset_t *set = (kvset_t*)_set;
-  return set->base;
 }
 
 kv_t *kv_get(void*_set, char *key) {

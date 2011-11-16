@@ -17,7 +17,6 @@
 
 typedef struct {
   char *dir;
-  char *base;
   char *path;
   int fd;
   size_t noc;
@@ -70,7 +69,7 @@ void sp_readlimits(const char *dir) {
   kv_spool_options.file_max = MIN(kv_spool_options.dir_max/10,KVSPOOL_FILE_MAX);
 }
 
-int sp_readdir(const char *dir, const char *base, const char *suffix, UT_array *files) {
+int sp_readdir(const char *dir, const char *suffix, UT_array *files) {
   int rc = -1, blen, nlen, slen;
   struct dirent *dent;
   char *name, *path;
@@ -79,7 +78,6 @@ int sp_readdir(const char *dir, const char *base, const char *suffix, UT_array *
 
   utstring_new(s);
   utarray_clear(files);
-  blen = base ? strlen(base) : 0;
   slen = suffix ? strlen(suffix) : 0;
 
   if ( (d = opendir(dir)) == NULL) {
@@ -91,9 +89,7 @@ int sp_readdir(const char *dir, const char *base, const char *suffix, UT_array *
     if (dent->d_type != DT_REG) continue;
     name = dent->d_name;
     nlen = strlen(name);
-    // verify base and suffix match 
-    if (blen && strncmp(base,name,blen)) continue;
-    if (blen && (name[blen] != '.')) continue;
+    // verify suffix match 
     if (slen && (nlen < slen)) continue;
     if (slen && memcmp(&name[nlen-slen],suffix,slen)) continue;
     // ok, fully qualify it and push it 
@@ -227,8 +223,7 @@ static int verify_and_lock(char *path, int create) {
   return fd;
 }
 
-static int lock_output_spool(const char *dir, const char *base, kv_spoolw_t *sp) {
-  int baselen = strlen(base);
+static int lock_output_spool(const char *dir, kv_spoolw_t *sp) {
   char *name, *path, **p;
   int fd = -1;
   int ts,rnd;
@@ -239,7 +234,7 @@ static int lock_output_spool(const char *dir, const char *base, kv_spoolw_t *sp)
   UT_string *s;
   utstring_new(s);
 
-  sp_readdir(dir, base, ".sp", files);
+  sp_readdir(dir, ".sp", files);
   sp_readlimits(dir);
   sp_keep_maxseq(files);
   p = NULL;
@@ -253,7 +248,7 @@ static int lock_output_spool(const char *dir, const char *base, kv_spoolw_t *sp)
   ts = (int)time(NULL);
   rnd = (((unsigned)(getpid()) & 0xf) << 4) | (rand() & 0xf);
   utstring_clear(s);
-  utstring_printf(s,"%s/%s.%u.%.3u-0.sp", dir, base, ts, rnd);
+  utstring_printf(s,"%s/kv.%u.%.3u-0.sp", dir, ts, rnd);
   path = utstring_body(s);
 
   if ( (fd=verify_and_lock(path,1)) == -1) {
@@ -264,7 +259,6 @@ static int lock_output_spool(const char *dir, const char *base, kv_spoolw_t *sp)
   if (fd != -1) {
     sp->fd = fd;
     sp->path = strdup(path);
-    sp->base = strdup(base);
     sp->dir = strdup(dir);
   }
   utarray_free(files);
@@ -310,19 +304,18 @@ static int kv_spoolwriter_reopen(kv_spoolw_t *sp) {
 /*******************************************************************************
  * Spool writer API
  ******************************************************************************/
-void *kv_spoolwriter_new(const char *dir, const char *base) {
-  assert(dir); assert(base);
+void *kv_spoolwriter_new(const char *dir) {
+  assert(dir);
 
   kv_spoolw_t *sp;
   if ( (sp = malloc(sizeof(*sp))) == NULL) sp_oom();
   memset(sp,0,sizeof(*sp));
   sp->dir = NULL;
-  sp->base = NULL;
   sp->path = NULL;
   sp->fd = -1;
   sp->noc = 0; /* schedule attrition scan for next write */
 
-  if (lock_output_spool(dir,base,sp) == -1) { free(sp); sp=NULL; }
+  if (lock_output_spool(dir,sp) == -1) { free(sp); sp=NULL; }
   return sp;
 }
 
@@ -396,7 +389,6 @@ void kv_spoolwriter_free(void*_sp) {
   assert(_sp);
   kv_spoolw_t *sp = (kv_spoolw_t*)_sp;
   if (sp->dir)  free(sp->dir);
-  if (sp->base) free(sp->base);
   if (sp->path) free(sp->path);
   if (sp->fd != -1) close(sp->fd);
   free(sp);

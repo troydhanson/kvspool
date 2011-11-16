@@ -66,21 +66,20 @@ static int kvs_to_dictionary(PyObject **_dict, void *set) {
 
 static PyObject *kvpy_read(PyObject *self, PyObject *args)
 {
-    char *dir, *base;
+    char *dir;
     int block, rc;
     void *sp, *set;
     PyObject *dict = NULL;
 
-    if (!PyArg_ParseTuple(args, "ssi:kvpy_read", &dir, &base, &block)) {
+    if (!PyArg_ParseTuple(args, "ssi:kvpy_read", &dir, &block)) {
         return NULL;
     }
 
     /* normalize inputs */
-    if (*base == '\0') base=NULL;
     block = block ? 1 : 0;
 
     /* try to read a spool frame */
-    if ( (sp = kv_spoolreader_new(dir,base)) == NULL) {
+    if ( (sp = kv_spoolreader_new(dir)) == NULL) {
       PyErr_SetString(PyExc_RuntimeError, "cannot initialize spool reader");
       return NULL;
     }
@@ -101,22 +100,16 @@ static PyObject *kvpy_read(PyObject *self, PyObject *args)
 
 static PyObject *kvpy_write(PyObject *self, PyObject *args)
 {
-    char *dir, *base;
+    char *dir;
     void *sp, *set;
     PyObject *dict;
 
-    if (!PyArg_ParseTuple(args, "ssO:kvpy_write", &dir, &base, &dict)) {
+    if (!PyArg_ParseTuple(args, "ssO:kvpy_write", &dir, &dict)) {
         return NULL;
     }
 
-    /* normalize inputs */
-    if (*base == '\0') {
-      PyErr_SetString(PyExc_RuntimeError, "base cannot be empty"); 
-      return NULL;
-    }
-
     /* try to write a spool frame */
-    if ( (sp = kv_spoolwriter_new(dir,base)) == NULL) {
+    if ( (sp = kv_spoolwriter_new(dir)) == NULL) {
       PyErr_SetString(PyExc_RuntimeError, "cannot initialize spool writer");
       return NULL;
     }
@@ -134,34 +127,28 @@ static PyObject *kvpy_write(PyObject *self, PyObject *args)
 
 static PyObject *kvpy_stat(PyObject *self, PyObject *args)
 {
-    char *dir, *base;
+    char *dir;
     int rc=0, sc, i;
-    kv_stat_t *stats;
+    kv_stat_t stats;
     PyObject *dict = NULL;
     PyObject *pk, *pv;
 
-    if (!PyArg_ParseTuple(args, "ss:kvpy_read", &dir, &base)) {
+    if (!PyArg_ParseTuple(args, "ss:kvpy_read", &dir)) {
         return NULL;
     }
 
-    if (*base == '\0') base=NULL;
-
-    sc = kv_stat(dir,base,&stats);
+    sc = kv_stat(dir,&stats);
     if (sc == -1) {
       PyErr_SetString(PyExc_RuntimeError, "kv_stat failed");
       return NULL;
     }
 
     dict = PyDict_New();
-    for(i=0; i < sc; i++) {
-      pk = PyString_FromString(stats[i].base);
-      pv = PyInt_FromLong((long)(stats[i].pct_consumed));
-      rc = PyDict_SetItem(dict,pk,pv);
-      Py_DECREF(pk);
-      Py_DECREF(pv);
-      if (rc == -1) break;
-    }
-    if (stats) free(stats);
+    pk = PyString_FromString("pct");
+    pv = PyInt_FromLong((long)(stats.pct_consumed));
+    rc = PyDict_SetItem(dict,pk,pv);
+    Py_DECREF(pk);
+    Py_DECREF(pv);
     if (rc == -1) {
       Py_DECREF(dict);
       dict = NULL;
@@ -171,21 +158,18 @@ static PyObject *kvpy_stat(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(kvpy_kypy_read__doc__,
-"kvpy_read(dir, base, block) -> dictionary\n\
+"kvpy_read(dir, block) -> dictionary\n\
 dir is directory\n\
-base may be the emtpy string\n\
 block is 1/0 indicating whether to wait for a frame if none is ready.");
 
 PyDoc_STRVAR(kvpy_kypy_write__doc__,
-"kvpy_write(dir, base, dict) \n\
+"kvpy_write(dir, dict) \n\
 dir is directory\n\
-base is the spool basename\n\
 dict is the dictionary to spool out");
 
 PyDoc_STRVAR(kvpy_kypy_stat__doc__,
-"kvpy_stat(dir, base) -> dictionary\n\
-dir is directory\n\
-base may be the emtpy string");
+"kvpy_stat(dir) -> dictionary\n\
+dir is directory\n");
 
 
 static PyMethodDef kvpy_methods[] = {

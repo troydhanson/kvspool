@@ -59,13 +59,12 @@ INCLUDE: const-xs.inc
 
 
 SV*
-makersp(char * dir,char * base)
+makersp(char * dir)
 PREINIT:
 void *sp;
 CODE:
-    if (*base == '\0') base=NULL;
 
-    if ( (sp = kv_spoolreader_new(dir,base)) == NULL) {
+    if ( (sp = kv_spoolreader_new(dir)) == NULL) {
       croak("cannot initialize spool reader");
     }
     //IV pv = PTR2IV(sp);
@@ -81,13 +80,12 @@ OUTPUT:
 
 
 SV*
-makewsp(char * dir,char * base)
+makewsp(char * dir)
 PREINIT:
 void *sp;
 CODE:
-    if (*base == '\0') base=NULL;
 
-    if ( (sp = kv_spoolwriter_new(dir,base)) == NULL) {
+    if ( (sp = kv_spoolwriter_new(dir)) == NULL) {
       croak("cannot initialize spool reader");
     }
     SV*  pv = newSViv(PTR2IV(sp));
@@ -158,16 +156,15 @@ CODE:
     kv_set_free(set);
 
 HV*
-kv_read(char * dir,char * base, int block)
+kv_read(char * dir, int block)
 PREINIT:
 void *sp,*set;
 HV *hash = NULL;
 int rc = 0;
 CODE:
-    if (*base == '\0') base=NULL;
     block = block ? 1 : 0;
 
-    if ( (sp = kv_spoolreader_new(dir,base)) == NULL) {
+    if ( (sp = kv_spoolreader_new(dir)) == NULL) {
       croak("cannot initialize spool reader");
       RETVAL = NULL;
     }
@@ -192,17 +189,13 @@ OUTPUT:
    RETVAL
 
 void
-kv_write(char * dir,char * base, HV* hash)
+kv_write(char * dir, HV* hash)
 INIT:
     void *sp, *set;
 CODE:
-    /* normalize inputs */
-    if (*base == '\0') {
-      croak("base cannot be empty"); 
-    }
 
     /* try to write a spool frame */
-    if ( (sp = kv_spoolwriter_new(dir,base)) == NULL) {
+    if ( (sp = kv_spoolwriter_new(dir)) == NULL) {
       croak("cannot initialize spool writer");
     }
 
@@ -217,28 +210,23 @@ CODE:
 
 
 HV*
-kv_stat(char * dir, char * base)
+kv_stat(char * dir)
 INIT:
     int sc, i;
     SV** rc = NULL;
-    kv_stat_t *stats;
+    kv_stat_t stats;
     HV *hash = NULL;
     SV *pv;
 CODE:
-    if (*base == '\0') base=NULL;
 
-    sc = kv_stat(dir,base,&stats);
+    sc = kv_stat(dir,&stats);
     if (sc == -1) {
       croak("kv_stat failed");
     }
 
     hash = newHV();
-    for(i=0; i < sc; i++) {
-      pv = sv_2mortal(newSViv((long)(stats[i].pct_consumed)));
-      rc = hv_store(hash,stats[i].base,strlen(stats[i].base),pv,0);
-      if (rc == NULL) break;
-    }
-    if (stats) free(stats);
+    pv = sv_2mortal(newSViv((long)(stats.pct_consumed)));
+    rc = hv_store(hash,"pct",strlen("pct"),pv,0);
     if (rc == NULL) {
       sv_2mortal((SV*)hash);
       hash = NULL;

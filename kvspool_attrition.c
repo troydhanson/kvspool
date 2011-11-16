@@ -89,7 +89,7 @@ void sp_attrition(char *dir) {
   size_t spool_sz, implied_max;
   UT_array *files=NULL, *ainfo=NULL;
   utarray_new(files, &ut_str_icd);
-  sp_readdir(dir, NULL, ".sp", files);
+  sp_readdir(dir, ".sp", files);
 #if 0
   /* bail out without having to 'stat' all the files in the spool, if we can */
   implied_max = utarray_len(files) * kv_spool_options.file_max;

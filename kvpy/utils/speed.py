@@ -13,7 +13,7 @@ d = {"key":"value","key2":"value2"}
 # write test
 t1 = datetime.now()
 for i in range(100000):
-  kvpy.kvpy_write("/tmp/spool","wr",d)
+  kvpy.kvpy_write("/tmp/spool",d)
 t2 = datetime.now()
 t3 = t2 - t1
 print "write:", int(100 / (t3.seconds + (t3.microseconds/1000000.0))), "kfps"
@@ -21,7 +21,7 @@ print "write:", int(100 / (t3.seconds + (t3.microseconds/1000000.0))), "kfps"
 # read test
 t1 = datetime.now()
 for i in range(100000):
-  kvpy.kvpy_read("/tmp/spool","wr",0)
+  kvpy.kvpy_read("/tmp/spool",0)
 t2 = datetime.now()
 t3 = t2 - t1
 print "read: ", int(100 / (t3.seconds + (t3.microseconds/1000000.0))), "kfps"

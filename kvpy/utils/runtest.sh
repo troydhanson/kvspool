@@ -8,5 +8,5 @@ if [ ! -d spool ]; then mkdir spool; fi
 if [ ! -x ${SPW} ]; then echo "script requires ${SPW}"; exit -1; fi
 
 # write out a frame and read it from python
-${SPW} -b base spool
+${SPW} spool
 ./read.py

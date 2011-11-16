@@ -23,14 +23,13 @@
 #define KVSPOOL_FILE_MAX (1*1024*1024*1024)
 
 void sp_oom(void);
-int sp_readdir(const char *dir, const char *base, const char *suffix, UT_array *files);
+int sp_readdir(const char *dir, const char *suffix, UT_array *files);
 int sp_strsort(const void *_a, const void *_b);
 int kv_write_raw_frame(void *sp, void *img, size_t len);
 void sp_readlimits(const char *dir);
 void sp_attrition(char *dir);
 void sp_keep_maxseq(UT_array *files);
 typedef struct { 
-  char *base; /* base for this set, valid when read from a spool or network */
   void *img;  /* the img and len refer to the serialized image of the kvset */
   size_t len; /* populated when a set is read from spool or publisher */
   kv_t *kvs; 

@@ -33,21 +33,18 @@ int main(int argc, char * argv[]) {
   if (optind >= argc) usage(argv[0]);
   dir = argv[optind++];
 
-  kv_stat_t *stats;
-  sc = kv_stat(dir,NULL,&stats);
+  kv_stat_t stats;
+  sc = kv_stat(dir,&stats);
   if (sc == -1) {
     printf("kv_stat error in %s\n", dir);
     goto done; 
   }
-  for(i=0; i < sc; i++) {
-    printf("%-20s: %3u%%\n", stats[i].base, stats[i].pct_consumed);
-  }
-  if (stats) free(stats);
+  printf("%3u%%\n", stats.pct_consumed);
 
   /* the rest is for verbose output */
   if (!verbose) goto done;
   printf("\n\n");
-  if (sp_readdir(dir, "", ".sr", files) == -1) goto done;
+  if (sp_readdir(dir, ".sr", files) == -1) goto done;
   f = NULL;
   while ( (f=(char**)utarray_next(files,f))) {
     file = *f;

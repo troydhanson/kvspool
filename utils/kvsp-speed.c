@@ -7,7 +7,6 @@
 
 int frames=100000;
 int verbose=0;
-char *base = "spw";
 char *dir = "/tmp";
 
 void usage(char *exe) {
@@ -31,7 +30,7 @@ int main(int argc, char *argv[]) {
   }
   if (optind < argc) dir=argv[optind++];
 
-  void *sp = kv_spoolwriter_new(dir,base);
+  void *sp = kv_spoolwriter_new(dir);
   if (!sp) exit(-1);
 
   char timebuf[100], iterbuf[10];
@@ -55,7 +54,7 @@ int main(int argc, char *argv[]) {
   kv_spoolwriter_free(sp);
 
   /* read test */
-  sp = kv_spoolreader_new(dir,NULL);
+  sp = kv_spoolreader_new(dir);
   gettimeofday(&t1,NULL);
   for(i=0; i<frames; i++) kv_spool_read(sp,set,0);
   gettimeofday(&t2,NULL);

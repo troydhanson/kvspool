@@ -1,7 +1,7 @@
 AM_CFLAGS = -I..
 LDADD = -L.. -lkvspool
 bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-size kvsp-status \
-               kvsp-import kvsp-export kvsp-speed kvsp-split kvsp-mod kvsp-reset
+               kvsp-speed kvsp-mod kvsp-reset
 
 if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-sub kvsp-pub

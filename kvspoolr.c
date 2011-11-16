@@ -18,7 +18,6 @@
 typedef struct {
   char *srpath; /* e.g. /tmp/myspool/spool.123456789.999-000.sr */
   char *sppath; /* e.g. /tmp/myspool/spool.123456789.999-000.sp */
-  char *spbase; /* e.g. spool */
   int retries;  /* to detect corrupt spool */
   int sp_fd;
   int sr_fd;
@@ -29,7 +28,6 @@ typedef struct {
 
 typedef struct {
   char *dir;
-  char *base;
   kv_spoolrec_t *spools;
   struct inotify_event *ev;
   size_t ev_sz;
@@ -45,7 +43,6 @@ static void unlock_spool(kv_spoolr_t *sp, kv_spoolrec_t *r) {
   HASH_DELETE(sppath_hh,sp->spools,r);
   if (r->srpath) free(r->srpath);
   if (r->sppath) free(r->sppath);
-  if (r->spbase) free(r->spbase);
   close(r->sr_fd);
   close(r->sp_fd);
   free(r);
@@ -72,17 +69,11 @@ static void validate_lock_spool(kv_spoolr_t *sp, char *path) {
 
   char *sppath = strdup(path);
   char *srpath = strdup(path); srpath[plen-1] = 'r';
-  /* copy the base from the path, e.g. /some/spool/BASE.123456789.999-0.sp */
-  char *slash = strrchr(sppath,'/'); assert(slash);
-  char *spbase = strdup(slash+1);
-  char *dot = strchr(spbase,'.'); assert(dot);
-  *dot = '\0';
 
   if ( (r = malloc(sizeof(*r))) == NULL) sp_oom();
   memset(r,0,sizeof(*r));
   r->srpath = srpath;
   r->sppath = sppath;
-  r->spbase = spbase;
   r->retries = 0;
   if ( (r->sp_fd = open(r->sppath, O_RDONLY)) == -1) goto fail;
   if ( (r->sr_fd = open(r->srpath, O_RDWR)) == -1) goto fail;
@@ -97,7 +88,6 @@ static void validate_lock_spool(kv_spoolr_t *sp, char *path) {
  fail:
   if (r->srpath) free(r->srpath);
   if (r->sppath) free(r->sppath);
-  if (r->spbase) free(r->spbase);
   if (r->sp_fd != -1) close(r->sp_fd);
   if (r->sr_fd != -1) close(r->sr_fd);
   free(r);
@@ -130,7 +120,7 @@ static int rescan_spools(kv_spoolr_t *sp) {
   UT_array *files;
   utarray_new(files, &ut_str_icd);
 
-  if (sp_readdir(sp->dir, sp->base, ".sp", files) == -1) goto done;
+  if (sp_readdir(sp->dir, ".sp", files) == -1) goto done;
 
   /* first lock all the spools that are listed in the directory */
   p = NULL;
@@ -216,7 +206,6 @@ static int read_frame(kv_spoolr_t *sp, kvset_t *set) {
     if (update_rpos(sp,r,sz) == -1) {free(img); continue;}
     r->last = time(NULL);
     fill_set(img,sz,sp,set);
-    assert(r->spbase); set->base = strdup(r->spbase);
     //do not free(img); that is done in kv_set_free
     return 1; /* success */
   }
@@ -229,13 +218,6 @@ static void fully_qualify(kv_spoolr_t *sp, char *name, char **path, int *plen) {
   utstring_printf(sp->tmp, "%s/%s", sp->dir, name);
   *path = utstring_body(sp->tmp); 
   *plen = utstring_len(sp->tmp);
-}
-
-static int prefix_match(char *file, char *base) {
-  char *dot = strchr(file,'.');
-  if (!dot) return 0;
-  if (!memcmp(file,base,dot-file)) return 1;
-  return 0;
 }
 
 /* block on event notification waiting for file modification */
@@ -266,9 +248,8 @@ static int wait_for_event(kv_spoolr_t *sp) {
 
 /*******************************************************************************
  * Spool reader API
- * base may be NULL to read all spools in the dir
  ******************************************************************************/
-void *kv_spoolreader_new(const char *dir, const char *base) {
+void *kv_spoolreader_new(const char *dir) {
   assert(dir);
   int rc = -1;
 
@@ -276,7 +257,6 @@ void *kv_spoolreader_new(const char *dir, const char *base) {
   if ( (sp = malloc(sizeof(*sp))) == NULL) sp_oom();
   memset(sp,0,sizeof(*sp));
   sp->dir = strdup(dir);
-  sp->base = base ? strdup(base) : NULL;
   sp->spools = NULL;
   sp->ev_sz = sizeof(*(sp->ev)) + PATH_MAX;
   if ( (sp->ev = malloc(sp->ev_sz)) == NULL) sp_oom();
@@ -290,7 +270,6 @@ void *kv_spoolreader_new(const char *dir, const char *base) {
  done:
   if (rc == -1) {
     if (sp->dir) free(sp->dir);
-    if (sp->base) free(sp->base);
     if (sp->ev) free(sp->ev);
     if (sp->tmp) utstring_free(sp->tmp);
     assert(sp->spools == NULL);
@@ -337,7 +316,6 @@ void kv_spoolreader_free(void *_sp) {
   kv_spoolrec_t *rec, *tmp;
 
   if (sp->dir) free(sp->dir);
-  if (sp->base) free(sp->base);
   if (sp->ev) free(sp->ev);
   if (sp->tmp) utstring_free(sp->tmp);
 
@@ -345,7 +323,6 @@ void kv_spoolreader_free(void *_sp) {
     HASH_DELETE(sppath_hh,sp->spools,rec);
     if (rec->srpath) free(rec->srpath);
     if (rec->sppath) free(rec->sppath);
-    if (rec->spbase) free(rec->spbase);
     if (rec->sp_fd != -1) close(rec->sp_fd);
     if (rec->sr_fd != -1) close(rec->sr_fd);
     free(rec);
@@ -354,14 +331,14 @@ void kv_spoolreader_free(void *_sp) {
   free(sp);
 }
 
-void sp_reset(const char *dir, const char *base) {
+void sp_reset(const char *dir) {
   char *path, **p;
   int sr_fd,rp;
 
   UT_array *files;
   utarray_new(files, &ut_str_icd);
 
-  if (sp_readdir(dir, base, ".sr", files) == -1) goto done;
+  if (sp_readdir(dir, ".sr", files) == -1) goto done;
 
   p = NULL;
   while ( (p = (char**)utarray_next(files,p))) {
@@ -378,72 +355,34 @@ void sp_reset(const char *dir, const char *base) {
   utarray_free(files);
 }
 
-/* get the percentage consumed for each spool in dir (limited to base
-   unless its NULL).  caller must free the returned stats.
-   returns -1 on error otherwise the number of structs in stats */
-int kv_stat(const char *dir, const char *base, kv_stat_t **stats) {
-  char **f, *file, *dot, *cur_base, *lst_base, *filepart;
+/* get the percentage consumed for dir 
+   returns -1 on error */
+int kv_stat(const char *dir, kv_stat_t *stats) {
+  char **f, *file;
   uint32_t sz, spsz;
   uint64_t gsz=0, gspsz=0;
   int fd, rr, rc = -1;
   struct stat sb;
   kv_stat_t *s;
 
-  *stats = NULL;
-
-  UT_icd kv_stat_icd = {sizeof(kv_stat_t), NULL, NULL, NULL };
-  UT_array *out; utarray_new(out, &kv_stat_icd);
-  UT_string *last_base; utstring_new(last_base);
-  UT_string *current_base; utstring_new(current_base);
   UT_array *files; utarray_new(files, &ut_str_icd);
-
-  if (sp_readdir(dir, base, ".sr", files) == -1) goto done;
+  if (sp_readdir(dir, ".sr", files) == -1) goto done;
 
   f = NULL;
   while ( (f=(char**)utarray_next(files,f))) {
     file = *f;
-
-    /* we'll accumulate grand totals for consecutive spool files with
-     * the same base (they are sorted for us); when the base changes
-     * and at the end, we emit the grand totals for the preceding base. */
-    filepart = strrchr(file,'/'); if (filepart) filepart++; else filepart = file;
-    dot = strchr(filepart,'.'); if (dot-filepart+1 > KV_BASE_MAX) continue;
-    utstring_clear(current_base); 
-    utstring_bincpy(current_base,filepart,dot-filepart);
-    cur_base = utstring_body(current_base);
 
     /* get size consumed (sz) and total spool size (spsz) for current sp/sr */
     if ( (fd=open(file,O_RDONLY)) == -1) continue;
     rr = read(fd,&sz,sizeof(sz)); close(fd); if (rr != sizeof(sz)) continue;
     file[strlen(file)-1]='p'; spsz = (stat(file,&sb) == -1) ? 0 : sb.st_size;
     if (spsz>=8) {spsz-=8; sz-=8;} else continue; /* ignore spool preamble */
-
-    /* if base switched, emit record for preceding base */
-    if ( (*(lst_base=utstring_body(last_base))!='\0') && strcmp(lst_base,cur_base)) {
-      utarray_extend_back(out); s = (kv_stat_t*)utarray_back(out);
-      strncpy(s->base,lst_base,sizeof(s->base));
-      s->pct_consumed = gspsz ? (int)(gsz * 100.0 / gspsz) : 100;
-      gsz = 0; gspsz = 0; /* reset */
-    }
     gsz += sz; gspsz += spsz;
-    utstring_clear(last_base); utstring_printf(last_base,"%s",cur_base);
   }
-  /* emit final one (if there was one) */
-  if ( (*(lst_base=utstring_body(last_base))) != '\0') {
-    utarray_extend_back(out); s = (kv_stat_t*)utarray_back(out);
-    strncpy(s->base,lst_base,sizeof(s->base));
-    s->pct_consumed = gspsz ? (int)(gsz * 100.0 / gspsz) : 100;
-  }
-
-  /* copy out results to final buffer to return */
-  rc = utarray_len(out); if (rc == 0) goto done;
-  *stats = malloc(rc * sizeof(kv_stat_t)); if (!stats) {rc = -1; goto done; }
-  memcpy(*stats, utarray_front(out), rc * sizeof(kv_stat_t));
+  stats->pct_consumed = gspsz ? (int)(gsz * 100.0 / gspsz) : 100;
+  rc = 0;  /* success */
 
  done:
-  utstring_free(last_base);
-  utstring_free(current_base);
   utarray_free(files);
-  utarray_free(out);
   return rc;
 }

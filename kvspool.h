@@ -6,8 +6,6 @@
 
 /* kvspool: an API for dealing with a set of key-value pairs */
 
-#define KV_BASE_MAX 256 /* max length of 'base' for spool writer */
-
 /******************************************************************************
  * key-value set API 
  *****************************************************************************/
@@ -29,7 +27,6 @@ void* kv_set_new(void);
 void kv_set_free(void*);
 void kv_set_clear(void*);
 void kv_set_dump(void *set,FILE *out);
-char *kv_set_base(void *);
 void kv_add(void*set, const char *key, int klen, const char *val, int vlen);
 void kv_addt(void*set, const char *key, char fmt, const void *val, int vlen);
 kv_t *kv_get(void*set, char *key);
@@ -40,11 +37,11 @@ kv_t *kv_next(void*set,kv_t *kv);
 /******************************************************************************
  * spooling API 
  *****************************************************************************/
-void *kv_spoolreader_new(const char *dir, const char *base);
+void *kv_spoolreader_new(const char *dir);
 int kv_spool_read(void*sp, void *set, int blocking);
 void kv_spoolreader_free(void*);
 
-void *kv_spoolwriter_new(const char *dir, const char *base);
+void *kv_spoolwriter_new(const char *dir);
 int kv_spool_write(void*sp, void *set);
 void kv_spoolwriter_free(void*);
 void sp_attrition(char *dir);
@@ -52,9 +49,9 @@ void sp_attrition(char *dir);
 /******************************************************************************
  * special purpose API 
  *****************************************************************************/
-typedef struct { char base[KV_BASE_MAX]; int pct_consumed; } kv_stat_t;
-int kv_stat(const char *dir, const char *base, kv_stat_t **stats);
-void sp_reset(const char *dir, const char *base);
+typedef struct { int pct_consumed; } kv_stat_t;
+int kv_stat(const char *dir, kv_stat_t *stats);
+void sp_reset(const char *dir);
 
 typedef struct {
   size_t dir_max;

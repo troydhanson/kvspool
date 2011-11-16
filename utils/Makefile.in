@@ -33,8 +33,7 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 bin_PROGRAMS = kvsp-spr$(EXEEXT) kvsp-spw$(EXEEXT) kvsp-tee$(EXEEXT) \
-	kvsp-size$(EXEEXT) kvsp-status$(EXEEXT) kvsp-import$(EXEEXT) \
-	kvsp-export$(EXEEXT) kvsp-speed$(EXEEXT) kvsp-split$(EXEEXT) \
+	kvsp-size$(EXEEXT) kvsp-status$(EXEEXT) kvsp-speed$(EXEEXT) \
 	kvsp-mod$(EXEEXT) kvsp-reset$(EXEEXT) $(am__EXEEXT_1)
 @HAVE_ZEROMQ_TRUE@am__append_1 = kvsp-sub kvsp-pub
 subdir = utils
@@ -51,12 +50,6 @@ CONFIG_CLEAN_VPATH_FILES =
 @HAVE_ZEROMQ_TRUE@am__EXEEXT_1 = kvsp-sub$(EXEEXT) kvsp-pub$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-kvsp_export_SOURCES = kvsp-export.c
-kvsp_export_OBJECTS = kvsp-export.$(OBJEXT)
-kvsp_export_LDADD = $(LDADD)
-kvsp_import_SOURCES = kvsp-import.c
-kvsp_import_OBJECTS = kvsp-import.$(OBJEXT)
-kvsp_import_LDADD = $(LDADD)
 kvsp_mod_SOURCES = kvsp-mod.c
 kvsp_mod_OBJECTS = kvsp-mod.$(OBJEXT)
 kvsp_mod_LDADD = $(LDADD)
@@ -72,9 +65,6 @@ kvsp_size_LDADD = $(LDADD)
 kvsp_speed_SOURCES = kvsp-speed.c
 kvsp_speed_OBJECTS = kvsp-speed.$(OBJEXT)
 kvsp_speed_LDADD = $(LDADD)
-kvsp_split_SOURCES = kvsp-split.c
-kvsp_split_OBJECTS = kvsp-split.$(OBJEXT)
-kvsp_split_LDADD = $(LDADD)
 kvsp_spr_SOURCES = kvsp-spr.c
 kvsp_spr_OBJECTS = kvsp-spr.$(OBJEXT)
 kvsp_spr_LDADD = $(LDADD)
@@ -97,12 +87,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = kvsp-export.c kvsp-import.c kvsp-mod.c kvsp-pub.c \
-	kvsp-reset.c kvsp-size.c kvsp-speed.c kvsp-split.c kvsp-spr.c \
-	kvsp-spw.c kvsp-status.c kvsp-sub.c kvsp-tee.c
-DIST_SOURCES = kvsp-export.c kvsp-import.c kvsp-mod.c kvsp-pub.c \
-	kvsp-reset.c kvsp-size.c kvsp-speed.c kvsp-split.c kvsp-spr.c \
-	kvsp-spw.c kvsp-status.c kvsp-sub.c kvsp-tee.c
+SOURCES = kvsp-mod.c kvsp-pub.c kvsp-reset.c kvsp-size.c kvsp-speed.c \
+	kvsp-spr.c kvsp-spw.c kvsp-status.c kvsp-sub.c kvsp-tee.c
+DIST_SOURCES = kvsp-mod.c kvsp-pub.c kvsp-reset.c kvsp-size.c \
+	kvsp-speed.c kvsp-spr.c kvsp-spw.c kvsp-status.c kvsp-sub.c \
+	kvsp-tee.c
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -288,12 +277,6 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
-kvsp-export$(EXEEXT): $(kvsp_export_OBJECTS) $(kvsp_export_DEPENDENCIES) 
-	@rm -f kvsp-export$(EXEEXT)
-	$(LINK) $(kvsp_export_OBJECTS) $(kvsp_export_LDADD) $(LIBS)
-kvsp-import$(EXEEXT): $(kvsp_import_OBJECTS) $(kvsp_import_DEPENDENCIES) 
-	@rm -f kvsp-import$(EXEEXT)
-	$(LINK) $(kvsp_import_OBJECTS) $(kvsp_import_LDADD) $(LIBS)
 kvsp-mod$(EXEEXT): $(kvsp_mod_OBJECTS) $(kvsp_mod_DEPENDENCIES) 
 	@rm -f kvsp-mod$(EXEEXT)
 	$(LINK) $(kvsp_mod_OBJECTS) $(kvsp_mod_LDADD) $(LIBS)
@@ -309,9 +292,6 @@ kvsp-size$(EXEEXT): $(kvsp_size_OBJECTS) $(kvsp_size_DEPENDENCIES)
 kvsp-speed$(EXEEXT): $(kvsp_speed_OBJECTS) $(kvsp_speed_DEPENDENCIES) 
 	@rm -f kvsp-speed$(EXEEXT)
 	$(LINK) $(kvsp_speed_OBJECTS) $(kvsp_speed_LDADD) $(LIBS)
-kvsp-split$(EXEEXT): $(kvsp_split_OBJECTS) $(kvsp_split_DEPENDENCIES) 
-	@rm -f kvsp-split$(EXEEXT)
-	$(LINK) $(kvsp_split_OBJECTS) $(kvsp_split_LDADD) $(LIBS)
 kvsp-spr$(EXEEXT): $(kvsp_spr_OBJECTS) $(kvsp_spr_DEPENDENCIES) 
 	@rm -f kvsp-spr$(EXEEXT)
 	$(LINK) $(kvsp_spr_OBJECTS) $(kvsp_spr_LDADD) $(LIBS)
@@ -334,14 +314,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-export.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-import.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-mod.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-pub.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-reset.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-size.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-speed.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-split.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-spr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-spw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvsp-status.Po@am__quote@

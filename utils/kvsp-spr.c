@@ -6,12 +6,11 @@
 
 int block=1;
 int verbose=0;
-char *base = NULL;
 char *dir = NULL;
 enum {mode_out,mode_nop} mode = mode_out;
 
 void usage(char *exe) {
-  fprintf(stderr,"usage: %s [-c|-f] [-v] [-b base] [-B(lock) <1|0>] <dir>\n", exe);
+  fprintf(stderr,"usage: %s [-c|-f] [-v] [-B(lock) <1|0>] <dir>\n", exe);
   fprintf(stderr,"  MODES: default               (text mode)\n");
   fprintf(stderr,"         -f                    (discard mode)\n");
   exit(-1);
@@ -25,11 +24,10 @@ int main(int argc, char *argv[]) {
   char *exe = argv[0];
   int opt;
 
-  while ( (opt = getopt(argc, argv, "cfB:b:v+p:")) != -1) {
+  while ( (opt = getopt(argc, argv, "cfB:v+p:")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
       case 'f': mode=mode_nop; break;
-      case 'b': base=strdup(optarg); break;
       case 'B': block=atoi(optarg)?1:0; break;
       default: usage(exe); break;
     }
@@ -37,7 +35,7 @@ int main(int argc, char *argv[]) {
   if (optind < argc) dir=argv[optind++];
   else usage(exe);
 
-  void *sp = kv_spoolreader_new(dir,base);
+  void *sp = kv_spoolreader_new(dir);
   if (!sp) exit(-1);
 
 

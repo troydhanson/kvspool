@@ -13,6 +13,12 @@
 #include "utarray.h"
 #include "kvspool_internal.h"
 
+#if ZMQ_VERSION_MAJOR == 2
+#define zmq_sendmsg zmq_send
+#define zmq_hwm_t uint64_t
+#else
+#define zmq_hwm_t int
+#endif
 /******************************************************************************
  * kvsp-publish
  * This program monitors multiple spools using a pool of readers
@@ -27,7 +33,7 @@ typedef struct {
 } worker_t;
 
 #define SHORT_DELAY 10
-const uint64_t hwm = 10000; /* high water mark: max messages pub will buffer */
+const zmq_hwm_t hwm = 10000; /* high water mark: max messages pub will buffer */
 
 worker_t *workers;
 int wn=1; /* workers needed: 1 device + 1 publisher per spool */
@@ -76,13 +82,19 @@ void device(void) {
   }
   if (zmq_setsockopt(sub_socket, ZMQ_SUBSCRIBE, "", 0)) goto done;
   /* don't backlog infinite outbound messages when no subs present */
-  if (zmq_setsockopt(pub_socket, ZMQ_HWM, &hwm, sizeof(hwm))) goto done;
+  if (zmq_setsockopt(pub_socket, ZMQ_SNDHWM, &hwm, sizeof(hwm))) goto done;
 
   /* one central publisher socket for external kvsp-sub's to get spools from */
   if (zmq_bind(pub_socket, pub_transport) == -1) goto done;
 
   /* central loop; this thing never exits unless exceptionally */
-  zmq_device(ZMQ_FORWARDER, sub_socket, pub_socket);
+  while(1) {
+    zmq_msg_t msg;
+    zmq_msg_init(&msg);
+    if ((rc = zmq_recvmsg(sub_socket,&msg,0)) != 0) break;
+    if ((rc = zmq_sendmsg(pub_socket,&msg,0)) != 0) break;
+    zmq_msg_close(&msg);
+  }
 
  done:
   if (rc) fprintf(stderr,"zmq: device %s\n", zmq_strerror(errno));
@@ -125,7 +137,7 @@ void worker(int w) {
   if (w == 0) device(); // never returns
 
   void *_set = kv_set_new();
-  void *sp = kv_spoolreader_new(workers[w].dir,NULL);
+  void *sp = kv_spoolreader_new(workers[w].dir);
   if (!sp) goto done;
 
   /* prepare for ZMQ publishing */
@@ -138,19 +150,12 @@ void worker(int w) {
   while (kv_spool_read(sp,_set,1) > 0) { /* read til interrupted by signal */
     kvset_t *set = (kvset_t*)_set; 
     assert(set->img && set->len);
-    assert(set->base);
 
     zmq_msg_t part;
 
-    rc = zmq_msg_init_size(&part, strlen(set->base)); assert(!rc);
-    memcpy(zmq_msg_data(&part), set->base, strlen(set->base));
-    rc = zmq_send(pub_socket, &part, ZMQ_SNDMORE);
-    zmq_msg_close(&part);
-    if(rc) goto done;
-
     rc = zmq_msg_init_size(&part, set->len); assert(!rc);
     memcpy(zmq_msg_data(&part), set->img, set->len);
-    rc = zmq_send(pub_socket, &part, 0);
+    rc = zmq_sendmsg(pub_socket, &part, 0);
     zmq_msg_close(&part);
     if(rc) goto done;
   }

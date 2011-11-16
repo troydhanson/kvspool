@@ -3,8 +3,8 @@ use Data::Dumper;
 use Text::CSV;
 use Text::CSV_XS;
 
-#my $hh = KVSpool::read("/home/adamstr1/cic/spool","",1);
-my $v = KVSpool->new("/home/adamstr1/cic/spool","spoo");
+#my $hh = KVSpool::read("/home/adamstr1/cic/spool",1);
+my $v = KVSpool->new("/home/adamstr1/cic/spool");
 
 
 my $csv = Text::CSV->new({always_quote => 1});

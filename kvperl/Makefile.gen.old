@@ -289,8 +289,8 @@ MPOLLUTE =
 # KVSpool might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
-EXTRALIBS = -L/home/thanson/checkouts/cic/linux/kvspool/kvperl/.. -lkvspool
-LDLOADLIBS = -L/home/thanson/checkouts/cic/linux/kvspool/kvperl/.. -lkvspool
+EXTRALIBS = -L/home/thanson/checkouts/kvspool/kvperl/.. -lkvspool
+LDLOADLIBS = -L/home/thanson/checkouts/kvspool/kvperl/.. -lkvspool
 BSLOADLIBS = 
 
 
@@ -921,7 +921,7 @@ ppd :
 	$(NOECHO) $(ECHO) '    <ABSTRACT>Perl extension for blah blah blah</ABSTRACT>' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '    <AUTHOR>A. U. Thor &lt;adamstr1@&gt;</AUTHOR>' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '    <IMPLEMENTATION>' >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) '        <ARCHITECTURE NAME="x86_64-linux-gnu-thread-multi-5.10" />' >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) '        <ARCHITECTURE NAME="i486-linux-gnu-thread-multi-5.10" />' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '        <CODEBASE HREF="" />' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '    </IMPLEMENTATION>' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '</SOFTPKG>' >> $(DISTNAME).ppd
