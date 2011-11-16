@@ -11,7 +11,8 @@
 
 void *sp;
 
-int verbose=0;
+int verbose;
+int pull_mode;
 char *dir;
 char *pub;
 
@@ -20,7 +21,8 @@ void *socket;
 
 
 void usage(char *exe) {
-  fprintf(stderr,"usage: %s [-v] -d <dir> <pub>\n", exe);
+  fprintf(stderr,"usage: %s [-v] [-s] -d <dir> <pub>\n", exe);
+  fprintf(stderr,"       -s runs in push-pull mode instead of lossy pub-sub\n");
   exit(-1);
 }
 
@@ -40,9 +42,10 @@ int main(int argc, char *argv[]) {
   size_t msg_len;
   zmq_msg_t part;
 
-  while ( (opt = getopt(argc, argv, "d:v+")) != -1) {
+  while ( (opt = getopt(argc, argv, "sd:v+")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
+      case 's': pull_mode++; break;
       case 'd': dir=strdup(optarg); break;
       default: usage(exe); break;
     }
@@ -54,9 +57,11 @@ int main(int argc, char *argv[]) {
   if (!sp) usage(exe);
 
   if ( !(context = zmq_init(1))) goto done;
-  if ( !(socket = zmq_socket(context, ZMQ_SUB))) goto done;
+  if ( !(socket = zmq_socket(context, pull_mode?ZMQ_PULL:ZMQ_SUB))) goto done;
   if (zmq_connect(socket, pub)) goto done;
-  if (zmq_setsockopt(socket, ZMQ_SUBSCRIBE, filter, strlen(filter))) goto done;
+  if (!pull_mode) {
+    if (zmq_setsockopt(socket, ZMQ_SUBSCRIBE, filter, strlen(filter))) goto done;
+  }
 
   while(1) {
 

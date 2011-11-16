@@ -38,14 +38,15 @@ const zmq_hwm_t hwm = 10000; /* high water mark: max messages pub will buffer */
 worker_t *workers;
 int wn=1; /* workers needed: 1 device + 1 publisher per spool */
 int verbose;
+int push_mode;
 char *file;
 char *pub_transport; /* client kvsp-sub's connect to us on this transport */
 UT_array *dirs;
 
 void usage(char *prog) {
-  fprintf(stderr, "usage: %s [-v] <dirs> <path>\n", prog);
+  fprintf(stderr, "usage: %s [-v] [-s] [-d dir [-d dir ...]] <path>\n", prog);
+  fprintf(stderr, "  -s runs in push mode instead of lossy pub-sub\n");
   fprintf(stderr, "  <path> is a 0mq path e.g. tcp://localhost:1234\n");
-  fprintf(stderr, "  <dirs> is '-d <dir> [-d <dir> ...]' or -f <dirfile>\n");
   exit(-1);
 }
 
@@ -62,16 +63,21 @@ void configure_worker(int n) {
 void device(void) {
   int n,rc=-1;
   void *dev_context=NULL;
-  void *sub_socket=NULL,*pub_socket=NULL;
+  void *pull_socket=NULL,*pub_socket=NULL;
   if ( !(dev_context = zmq_init(1))) goto done;
-  if ( !(sub_socket = zmq_socket(dev_context, ZMQ_SUB))) goto done;
-  if ( !(pub_socket = zmq_socket(dev_context, ZMQ_PUB))) goto done;
+  if ( !(pull_socket = zmq_socket(dev_context, ZMQ_PULL))) goto done;
+
+  if (push_mode) {
+    if ( !(pub_socket = zmq_socket(dev_context, ZMQ_PUSH))) goto done;
+  } else {
+    if ( !(pub_socket = zmq_socket(dev_context, ZMQ_PUB))) goto done;
+  }
 
   /* connect the subscriber socket to each of the workers. then subscribe it */
   for(n=1;n<wn;n++) {
     int attempts=0;
     do { 
-      rc = zmq_connect(sub_socket,workers[n].transport);
+      rc = zmq_connect(pull_socket,workers[n].transport);
       if (rc) sleep(1);
     } while(rc && (attempts++ < 10));
     if (rc) {
@@ -80,7 +86,6 @@ void device(void) {
         goto done;
     }
   }
-  if (zmq_setsockopt(sub_socket, ZMQ_SUBSCRIBE, "", 0)) goto done;
   /* don't backlog infinite outbound messages when no subs present */
   if (zmq_setsockopt(pub_socket, ZMQ_SNDHWM, &hwm, sizeof(hwm))) goto done;
 
@@ -91,7 +96,7 @@ void device(void) {
   while(1) {
     zmq_msg_t msg;
     zmq_msg_init(&msg);
-    if ((rc = zmq_recvmsg(sub_socket,&msg,0)) != 0) break;
+    if ((rc = zmq_recvmsg(pull_socket,&msg,0)) != 0) break;
     if ((rc = zmq_sendmsg(pub_socket,&msg,0)) != 0) break;
     zmq_msg_close(&msg);
   }
@@ -99,7 +104,7 @@ void device(void) {
  done:
   if (rc) fprintf(stderr,"zmq: device %s\n", zmq_strerror(errno));
   if (pub_socket) zmq_close(pub_socket);
-  if (sub_socket) zmq_close(sub_socket);
+  if (pull_socket) zmq_close(pull_socket);
   if (dev_context) zmq_term(dev_context);
   exit(rc);  /* never return, we are a worker subprocess */
 }
@@ -138,14 +143,19 @@ void worker(int w) {
 
   void *_set = kv_set_new();
   void *sp = kv_spoolreader_new(workers[w].dir);
-  if (!sp) goto done;
+  if (!sp) {
+    fprintf(stderr,"failed to open spool %s\n", workers[w].dir);
+    goto done;
+  }
 
   /* prepare for ZMQ publishing */
   void *pub_context;
   void *pub_socket;
-  if ( !(pub_context = zmq_init(1))) goto done;
-  if ( !(pub_socket = zmq_socket(pub_context, ZMQ_PUB))) goto done;
-  if (zmq_bind(pub_socket, workers[w].transport) == -1) goto done;
+  if ( (!(pub_context = zmq_init(1)))                       || 
+     ( (!(pub_socket = zmq_socket(pub_context, ZMQ_PUSH)))) ||
+     (zmq_bind(pub_socket, workers[w].transport) == -1)) {
+    goto done;
+  }
 
   while (kv_spool_read(sp,_set,1) > 0) { /* read til interrupted by signal */
     kvset_t *set = (kvset_t*)_set; 
@@ -159,6 +169,7 @@ void worker(int w) {
     zmq_msg_close(&part);
     if(rc) goto done;
   }
+  fprintf(stderr,"kv_spool_read exited (signal?)\n");
 
   rc=0;
 
@@ -169,7 +180,6 @@ void worker(int w) {
   if (pub_context) zmq_term(pub_context);
   if (sp) kv_spoolreader_free(sp);
   kv_set_free(_set);
- 
   exit(rc);  /* do not return */
 }
 
@@ -227,9 +237,10 @@ int main(int argc, char *argv[]) {
 
   utarray_new(dirs,&ut_str_icd);
 
-  while ( (opt = getopt(argc, argv, "v+f:d:")) != -1) {
+  while ( (opt = getopt(argc, argv, "v+sf:d:")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
+      case 's': push_mode++; break;
       case 'f': file=optarg; read_conf(file); break;
       case 'd': dir=optarg; utarray_push_back(dirs,&dir); break;
       default: usage(argv[0]); break;
