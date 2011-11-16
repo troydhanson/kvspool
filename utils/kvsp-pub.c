@@ -15,7 +15,9 @@
 
 #if ZMQ_VERSION_MAJOR == 2
 #define zmq_sendmsg zmq_send
+#define zmq_recvmsg zmq_recv
 #define zmq_hwm_t uint64_t
+#define ZMQ_SNDHWM ZMQ_HWM
 #else
 #define zmq_hwm_t int
 #endif
@@ -46,7 +48,7 @@ UT_array *dirs;
 void usage(char *prog) {
   fprintf(stderr, "usage: %s [-v] [-s] [-d dir [-d dir ...]] <path>\n", prog);
   fprintf(stderr, "  -s runs in push mode instead of lossy pub-sub\n");
-  fprintf(stderr, "  <path> is a 0mq path e.g. tcp://localhost:1234\n");
+  fprintf(stderr, "  <path> is a 0mq path e.g. tcp://127.0.0.1:1234\n");
   exit(-1);
 }
 
@@ -87,10 +89,10 @@ void device(void) {
     }
   }
   /* don't backlog infinite outbound messages when no subs present */
-  if (zmq_setsockopt(pub_socket, ZMQ_SNDHWM, &hwm, sizeof(hwm))) goto done;
+  if ( (rc=zmq_setsockopt(pub_socket, ZMQ_SNDHWM, &hwm, sizeof(hwm)))) goto done;
 
   /* one central publisher socket for external kvsp-sub's to get spools from */
-  if (zmq_bind(pub_socket, pub_transport) == -1) goto done;
+  if ( (rc=zmq_bind(pub_socket, pub_transport) == -1)) goto done;
 
   /* central loop; this thing never exits unless exceptionally */
   while(1) {
@@ -274,7 +276,7 @@ int main(int argc, char *argv[]) {
               assert(n != wn);
               int elapsed = time(NULL) - workers[n].start;
               if (elapsed < SHORT_DELAY) defer_restart=1;
-              printf("pid %d exited after %d seconds: ", (int)pid, elapsed);
+              printf("worker %d (%d) exited after %d seconds: ", n, (int)pid, elapsed);
               if (WIFEXITED(es)) printf("exit status %d\n", (int)WEXITSTATUS(es));
               else if (WIFSIGNALED(es)) printf("signal %d\n", (int)WTERMSIG(es));
               workers[n].pid = 0;
