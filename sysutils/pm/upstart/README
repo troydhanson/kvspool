@@ -1,7 +1,0 @@
-This directory contains pm.conf, which is an upstart job. It gets
-installed in /etc/init/pm.conf. It's purpose is to start pm itself.
-
-Note: despite the name pm.conf this is a not a pm (process manager)
-configuration file. The latter gets installed in /etc/pm.conf and
-contains the jobs being managed within pm.
-
