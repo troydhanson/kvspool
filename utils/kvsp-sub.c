@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     part_num=1;
     do {
       if ( (rc= zmq_msg_init(&part))) goto done;
-      if ( ((rc= zmq_recvmsg(socket, &part, 0)) != 0) || 
+      if ( ((rc= zmq_recvmsg(socket, &part, 0)) == -1) || 
            ((rc= zmq_getsockopt(socket, ZMQ_RCVMORE, &more,&more_sz)) != 0)) {
         zmq_msg_close(&part);
         goto done;

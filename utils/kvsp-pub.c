@@ -98,8 +98,8 @@ void device(void) {
   while(1) {
     zmq_msg_t msg;
     zmq_msg_init(&msg);
-    if ((rc = zmq_recvmsg(pull_socket,&msg,0)) != 0) break;
-    if ((rc = zmq_sendmsg(pub_socket,&msg,0)) != 0) break;
+    if ((rc = zmq_recvmsg(pull_socket,&msg,0)) == -1) break;
+    if ((rc = zmq_sendmsg(pub_socket,&msg,0)) == -1) break;
     zmq_msg_close(&msg);
   }
 
@@ -169,7 +169,7 @@ void worker(int w) {
     memcpy(zmq_msg_data(&part), set->img, set->len);
     rc = zmq_sendmsg(pub_socket, &part, 0);
     zmq_msg_close(&part);
-    if(rc) goto done;
+    if(rc == -1) goto done;
   }
   fprintf(stderr,"kv_spool_read exited (signal?)\n");
 
