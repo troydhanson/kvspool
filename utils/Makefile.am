@@ -12,11 +12,13 @@ kvsp_status_LDADD = $(LIBSPOOL)
 kvsp_speed_LDADD = $(LIBSPOOL)
 kvsp_mod_LDADD = $(LIBSPOOL)
 kvsp_reset_LDADD = $(LIBSPOOL)
+kvsp_pub_LDADD = $(LIBSPOOL)
+kvsp_sub_LDADD = $(LIBSPOOL)
 
 if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-sub kvsp-pub
-kvsp_pub_LDADD = $(LDADD) -lzmq
-kvsp_sub_LDADD = $(LDADD) -lzmq
+kvsp_pub_LDADD += -lzmq
+kvsp_sub_LDADD += -lzmq
 endif
 
 # to get a rebuild of the utilities when ../libkvspool.a changes:
