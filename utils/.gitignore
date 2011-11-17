@@ -9,4 +9,4 @@ kvsp-reset
 kvsp-split
 kvsp-spr
 kvsp-spw
-.deps
+.deps/
