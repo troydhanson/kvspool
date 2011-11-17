@@ -4,14 +4,14 @@ bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-size kvsp-status \
                kvsp-speed kvsp-mod kvsp-reset \
                ramdisk
 
-kvsp-spr_LDADD = $(LIBSPOOL)
-kvsp-spw_LDADD = $(LIBSPOOL)
-kvsp-tee_LDADD = $(LIBSPOOL)
-kvsp-size_LDADD = $(LIBSPOOL)
-kvsp-status_LDADD = $(LIBSPOOL)
-kvsp-speed_LDADD = $(LIBSPOOL)
-kvsp-mod_LDADD = $(LIBSPOOL)
-kvsp-reset_LDADD = $(LIBSPOOL)
+kvsp_spr_LDADD = $(LIBSPOOL)
+kvsp_spw_LDADD = $(LIBSPOOL)
+kvsp_tee_LDADD = $(LIBSPOOL)
+kvsp_size_LDADD = $(LIBSPOOL)
+kvsp_status_LDADD = $(LIBSPOOL)
+kvsp_speed_LDADD = $(LIBSPOOL)
+kvsp_mod_LDADD = $(LIBSPOOL)
+kvsp_reset_LDADD = $(LIBSPOOL)
 
 if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-sub kvsp-pub
