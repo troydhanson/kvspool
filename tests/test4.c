@@ -8,13 +8,11 @@
 #include "utarray.h"
 #include "utils.h"
 
-char *base = "spool";
-
 int main(int argc, char *argv[]) {
 
   char *dir = mktmpdir();
 
-  void *sp = kv_spoolwriter_new(dir,base);
+  void *sp = kv_spoolwriter_new(dir);
   if (!sp) exit(-1);
 
   void *set = kv_set_new();

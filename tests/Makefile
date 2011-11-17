@@ -2,9 +2,10 @@ SRCS = $(wildcard test*.c)
 PROGS = $(patsubst %.c,%,$(SRCS))
 
 LIBDIR = ..
-LIB = $(LIBDIR)/libts.a
+LIB = ../libkvspool.a
+LDFLAGS = -L$(LIBDIR) -lkvspool
 
-CFLAGS = -I$(LIBDIR) -fno-strict-aliasing
+CFLAGS = -I$(LIBDIR)/include -I$(LIBDIR) -fno-strict-aliasing
 CFLAGS += -g
 CFLAGS += -Wall 
 CFLAGS += ${EXTRA_CFLAGS}
@@ -14,8 +15,8 @@ TESTS=./do_tests
 
 all: $(PROGS) $(TEST_TARGET) 
 
-$(PROGS): $(LIB) 
-	$(CC) $(CFLAGS) -o $@ $(@).c $(LIB)
+$(PROGS): $(LIB) utils.o
+	$(CC) $(CFLAGS) -o $@ $(@).c utils.o $(LDFLAGS)
 
 run_tests: $(PROGS)
 	perl $(TESTS)

@@ -8,15 +8,16 @@
 #include "utarray.h"
 #include "utils.h"
 
-char *base = "spool";
-int main(int argc, char *argv[]) {
 
-  /* customize the spool options */
-  kv_spool_options.dir_max = 3*1024*1024; /* 3 mb */
+
+/******************************************************************************
+ * the test itself
+ *****************************************************************************/
+int main(int argc, char *argv[]) {
 
   char *dir = mktmpdir();
 
-  void *sp = kv_spoolwriter_new(dir,base);
+  void *sp = kv_spoolwriter_new(dir);
   if (!sp) exit(-1);
 
   void *set = kv_set_new();
@@ -27,24 +28,53 @@ int main(int argc, char *argv[]) {
   /* scan spool to validate expected file creation */
   scan_spool(0);
 
-  int i, num_spoolouts = 20000; 
-  /* one set is about 54 bytes so it takes that many to exceed the 1mb 
-     spool max size and induce creation of a second spool file */
-  printf("spooling %d more frames\n", num_spoolouts);
-  for(i=0; i<num_spoolouts; i++) kv_spool_write(sp,set);
-  scan_spool(0); 
-
-  /* a third spool */
-  printf("spooling %d more frames\n", num_spoolouts);
-  for(i=0; i<num_spoolouts; i++) kv_spool_write(sp,set);
-  scan_spool(0); 
-
-  /* a fourth spool.. induces some attrition */
-  printf("spooling %d more frames\n", num_spoolouts);
-  for(i=0; i<num_spoolouts; i++) kv_spool_write(sp,set);
-  scan_spool(1); 
-
+  /* replace a value in the set, spool the set out. it should append
+   * to the spool file previously created. */
+  printf("spooling second frame\n");
+  kv_adds(set, "second", "time");
+  kv_spool_write(sp,set);
   kv_spoolwriter_free(sp);
+
+  /* verify spool has updated according to expectation */
+  scan_spool(0);
+
+  printf("clear set\n");
+  kv_set_clear(set);
+  /* loop over them */
+  kv_t *kv = NULL;
+  while ( (kv = kv_next(set, kv))) {
+    printf("key [%.*s], val [%.*s]\n", kv->klen, kv->key, kv->vlen, kv->val);
+  }
+
+  printf("reading from spool\n");
+  /* now try reading the spool */
+  sp = kv_spoolreader_new(dir);
+  int rc;
+  while ( (rc=kv_spool_read(sp, set, 0)) == 1) {
+    printf("reader read frame:\n");
+    kv = NULL;
+    while ( (kv = kv_next(set, kv))) {
+      printf(" key [%.*s], val [%.*s]\n", kv->klen, kv->key, kv->vlen, kv->val);
+    }
+  }
+  printf("kv_spool_read returned %d\n", rc);
+  kv_spoolreader_free(sp);
+
+  /* now reset it and read again */
+  printf("resetting the spool directory for another round of reading\n");
+  sp_reset(dir);
+  sp = kv_spoolreader_new(dir);
+  while ( (rc=kv_spool_read(sp, set, 0)) == 1) {
+    printf("reader read frame:\n");
+    kv = NULL;
+    while ( (kv = kv_next(set, kv))) {
+      printf(" key [%.*s], val [%.*s]\n", kv->klen, kv->key, kv->vlen, kv->val);
+    }
+  }
+  printf("kv_spool_read returned %d\n", rc);
+  kv_spoolreader_free(sp);
+
   kv_set_free(set);
+  scan_spool(1);
   return 0;
 }

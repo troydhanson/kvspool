@@ -1,7 +1,16 @@
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sp, len 65
+file kv.**********.***-*.sr, len 4
+file kv.**********.***-*.sp, len 69
 spooling second frame
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sp, len 65
-file spool.**********.***-*.sp, len 75
+file kv.**********.***-*.sr, len 4
+file kv.**********.***-*.sp, len 126
+clear set
+reading from spool
+reader read frame:
+ key [hello], val [again]
+ key [second], val [life]
+reader read frame:
+ key [hello], val [again]
+ key [second], val [time]
+kv_spool_read returned 0
+file kv.**********.***-*.sr, len 4
+file kv.**********.***-*.sp, len 126

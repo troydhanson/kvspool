@@ -1,49 +1,24 @@
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sp, len 65
-spooling 20000 more frames
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sp, len 196316
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-spooling 20000 more frames
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sp, len 77984
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-spooling 20000 more frames
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-**.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-*.sr, len 4
-file spool.**********.***-**.sp, len 274235
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
-file spool.**********.***-*.sp, len 314591
+file kv.**********.***-*.sr, len 4
+file kv.**********.***-*.sp, len 69
+spooling second frame
+file kv.**********.***-*.sr, len 4
+file kv.**********.***-*.sp, len 126
+clear set
+reading from spool
+reader read frame:
+ key [hello], val [again]
+ key [second], val [life]
+reader read frame:
+ key [hello], val [again]
+ key [second], val [time]
+kv_spool_read returned 0
+resetting the spool directory for another round of reading
+reader read frame:
+ key [hello], val [again]
+ key [second], val [life]
+reader read frame:
+ key [hello], val [again]
+ key [second], val [time]
+kv_spool_read returned 0
+file kv.**********.***-*.sr, len 4
+file kv.**********.***-*.sp, len 126

@@ -2,14 +2,5 @@ test1: initial key-value creation and free
 test2: test key replacement
 test3: test spooling out
 test4: test spooling out, then a second set (append)
-test5: test two spool writers locking separate spools
-test6: test spool reopen logic when spool grows to max 
-test7: spool reader test
-test8: test internal function that keeps filenames w/highest sequence numbers
-test9: test programmatic reset
-test10: test programmatic reset when another read has lock
-test11: test kv_set_base
-test12: test kv_statdir
-test13: test kv_statdir
-test14: test kv_statdir
-test15: test zero-length NULL value and double
+test5: spool reader test
+test6: test programmatic reset
