@@ -6,3 +6,4 @@ Makefile
 .deps
 Makefile.in
 config.status
+config
