@@ -4,6 +4,7 @@
 # It is executed only to generate "configure"
 
 set -x
+if [ ! -d config ]; then mkdir config; fi
 aclocal -I config
 autoheader
 automake --foreign --add-missing --copy
