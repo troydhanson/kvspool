@@ -7,3 +7,4 @@ Makefile
 Makefile.in
 config.status
 config
+configure
