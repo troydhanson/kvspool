@@ -1,4 +1,4 @@
-AM_CFLAGS = -I..
+AM_CFLAGS = -I.. -I../include
 LDADD = -L.. -lkvspool
 bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-size kvsp-status \
                kvsp-speed kvsp-mod kvsp-reset
