@@ -11,3 +11,4 @@ kvsp-spw
 *.o
 *.a
 .deps
+Makefile.in
