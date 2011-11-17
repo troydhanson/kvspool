@@ -1,6 +1,0 @@
-These utilities should eventually be moved out of the kvspool source tree.
-They're here for now because they're sometimes useful with kvspool-based
-applications, particularly ramdisk.
-
-pm was in this directory; it has been renamed pmtr and is now in its own repo. 
-see http://troydhanson.github.com/pmtr

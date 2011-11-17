@@ -1,2 +1,0 @@
-test1: writes n log messages, can be used to test log rotation
-test2: test atomicity of writes when parent/child both write logs
