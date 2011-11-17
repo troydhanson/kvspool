@@ -12,3 +12,4 @@ kvsp-spw
 *.a
 .deps
 Makefile.in
+ramdisk
