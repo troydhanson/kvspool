@@ -1,0 +1,6 @@
+Makefile
+*.cache
+*.log
+*.o
+*.a
+.deps

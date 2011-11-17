@@ -2,9 +2,9 @@
 3. Move sysutils to their own repo
 4. Add documentation/slides
 6. Change Python to have object wrapper
-8. kvsp-import/export should be subsumed by kvsp-pub/sub
 
 #done
 5. Remove 'base' parameter everywhere
 9. put libts in external snippets repo
 7. zcon and zcontrol should be in a ZeroMQ add-on's repo
+8. kvsp-import/export should be subsumed by kvsp-pub/sub
