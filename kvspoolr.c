@@ -190,8 +190,8 @@ static int read_frame(kv_spoolr_t *sp, kvset_t *set) {
 
   HASH_ITER(sppath_hh, sp->spools, r, tmp) {
     if (fstat(r->sp_fd, &sb) == -1) { sp->need_rescan=1; continue; }
-    if (sb.st_size < sizeof(off_t)) continue;
-    if (sb.st_size - sizeof(off_t) <= r->pos) continue;
+    if (sb.st_size < sizeof(uint32_t)) continue;
+    if (sb.st_size - sizeof(uint32_t) <= r->pos) continue;
     if (lseek(r->sp_fd, r->pos, SEEK_SET) == -1) {sp->need_rescan=1; continue; }
     if (tpl_gather(TPL_GATHER_BLOCKING, r->sp_fd, &img, &sz) <= 0) {
       if (++r->retries > 3) {

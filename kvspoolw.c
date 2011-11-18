@@ -357,6 +357,7 @@ int kv_spool_write(void*_sp, void *_set) {
   char *buf=NULL; 
   char *key, fmt;
   size_t len;
+  uint32_t len32;
   tpl_bin v;
   int rc=-1;
 
@@ -370,11 +371,11 @@ int kv_spool_write(void*_sp, void *_set) {
     tpl_pack(tn,1);
   }
 
-  tpl_dump(tn, TPL_MEM, &buf, &len);
+  tpl_dump(tn, TPL_MEM, &buf, &len); len32 = (uint32_t)len;
   if (buf==NULL || len==0) goto done;
   if (write(sp->fd, buf, len) != len) goto done;
-  if (write(sp->fd, &len, sizeof(len)) != sizeof(len)) goto done;
-  lseek(sp->fd, -1*sizeof(len), SEEK_CUR);
+  if (write(sp->fd, &len32, sizeof(len32)) != sizeof(len32)) goto done;
+  lseek(sp->fd, -1*sizeof(len32), SEEK_CUR);
   rc=0;
 
   /* spool file and spool directory size check */
