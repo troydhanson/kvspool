@@ -843,7 +843,9 @@ words, can we put the data stream into a visible entry in the file system, with 
 benefits that confers (for example, the ability to copy it easily) and yet still retain an
 event-driven model where the reader is woken up only when new data is available? (Yes, we
 can, using inotify). The wish list became,</p></div>
-<div class="paragraph"><p>#. stream should be a file (can be on a ram disk)
+<div class="literalblock">
+<div class="content">
+<pre><tt>#. stream should be a file (can be on a ram disk)
 #. reader should be event driven
 #. let the user configure how much disk space to allocate to the stream
 #. drop old data (whether its read or unread) when the stream fills up
@@ -854,7 +856,8 @@ can, using inotify). The wish list became,</p></div>
 #. work locally or over a network.
 #. insulate writer from reader (so much that either can be absent or sporadically present)
 #. work with many languages.
-#. easy to use.</p></div>
+#. easy to use.</tt></pre>
+</div></div>
 <div class="paragraph"><p>Kvspool does these things. It&#8217;s not a sophisticated suite. It&#8217;s just a tool in the
 Unix tradition that does one thing and tries to do it well.</p></div>
 </div>
@@ -1376,13 +1379,16 @@ mkdir /var/ramdisk/spool</tt></pre>
 <div class="paragraph"><p>For background processes that need to be left running continuously, such as <tt>kvsp-tee</tt>,
 <tt>kvsp-sub</tt>, <tt>kvsp-pub</tt>, configure these to run at startup. The author has a open-source
 process monitor called <tt>pmtr</tt> in which jobs like this can be configured like this:</p></div>
-<div class="paragraph"><p>job {
+<div class="literalblock">
+<div class="content">
+<pre><tt>job {
   name publisher
   dir /data/spool
   cmd /usr/local/bin/kvsp-pub -d spool tcp://192.168.1.9:1110
   out pub.out
   err pub.err
-}</p></div>
+}</tt></pre>
+</div></div>
 <div class="paragraph"><p>The <a href="http://troydhanson.github.com/pmtr/">pmtr process manager site</a> has more information.</p></div>
 </div>
 <div class="sect2">
@@ -1477,7 +1483,7 @@ Use JSON internally
 <div id="footer">
 <div id="footer-text">
 Version 0.5<br />
-Last updated 2012-02-24 01:54:21 EST
+Last updated 2012-02-24 02:01:53 EST
 </div>
 </div>
 </body>

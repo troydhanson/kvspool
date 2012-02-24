@@ -61,18 +61,18 @@ benefits that confers (for example, the ability to copy it easily) and yet still
 event-driven model where the reader is woken up only when new data is available? (Yes, we
 can, using inotify). The wish list became,
 
-#. stream should be a file (can be on a ram disk)
-#. reader should be event driven 
-#. let the user configure how much disk space to allocate to the stream 
-#. drop old data (whether its read or unread) when the stream fills up
-#. put framing into the stream so that we can read and write whole messages
-#. use key-value sets (aka a dictionary or hash) as the data unit
-#. copy a "live" data stream to a frozen "snapshot"
-#. support rewind and replay.
-#. work locally or over a network.
-#. insulate writer from reader (so much that either can be absent or sporadically present)
-#. work with many languages.
-#. easy to use.
+ #. stream should be a file (can be on a ram disk)
+ #. reader should be event driven 
+ #. let the user configure how much disk space to allocate to the stream 
+ #. drop old data (whether its read or unread) when the stream fills up
+ #. put framing into the stream so that we can read and write whole messages
+ #. use key-value sets (aka a dictionary or hash) as the data unit
+ #. copy a "live" data stream to a frozen "snapshot"
+ #. support rewind and replay.
+ #. work locally or over a network.
+ #. insulate writer from reader (so much that either can be absent or sporadically present)
+ #. work with many languages.
+ #. easy to use.
 
 Kvspool does these things. It's not a sophisticated suite. It's just a tool in the
 Unix tradition that does one thing and tries to do it well. 
@@ -475,13 +475,13 @@ For background processes that need to be left running continuously, such as `kvs
 `kvsp-sub`, `kvsp-pub`, configure these to run at startup. The author has a open-source
 process monitor called `pmtr` in which jobs like this can be configured like this:
 
-job {
-  name publisher
-  dir /data/spool
-  cmd /usr/local/bin/kvsp-pub -d spool tcp://192.168.1.9:1110
-  out pub.out
-  err pub.err
-}
+ job {
+   name publisher
+   dir /data/spool
+   cmd /usr/local/bin/kvsp-pub -d spool tcp://192.168.1.9:1110
+   out pub.out
+   err pub.err
+ }
 
 The http://troydhanson.github.com/pmtr/[pmtr process manager site] has more information.
 
