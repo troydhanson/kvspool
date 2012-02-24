@@ -1,12 +1,17 @@
 AC_PREREQ(2.59)
 
-AC_INIT([kvspool], [1.0], [troy.hanson@jhuapl.edu])
+AC_INIT([kvspool], [1.0], [tdh@tkhanson.net])
 AC_CONFIG_SRCDIR(kvspool.c)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS(config/config.h)
 AM_INIT_AUTOMAKE
 AC_PROG_CC
 AC_PROG_RANLIB
+
+# is Jansson installed
+AC_CHECK_LIB(jansson,json_string,
+  AM_CONDITIONAL(HAVE_JANSSON,true),
+  AM_CONDITIONAL(HAVE_JANSSON,false))
 
 # is zeromq (0MQ) installed
 AC_CHECK_LIB(zmq,zmq_init,

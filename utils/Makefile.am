@@ -16,9 +16,11 @@ kvsp_pub_LDADD = $(LIBSPOOL)
 kvsp_sub_LDADD = $(LIBSPOOL)
 
 if HAVE_ZEROMQ
-bin_PROGRAMS += kvsp-sub kvsp-pub
-kvsp_pub_LDADD += -lzmq
-kvsp_sub_LDADD += -lzmq
+if HAVE_JANSSON
+bin_PROGRAMS += kvsp-sub kvsp-pub 
+kvsp_pub_LDADD += -lzmq -ljansson
+kvsp_sub_LDADD += -lzmq -ljansson
+endif
 endif
 
 # to get a rebuild of the utilities when ../libkvspool.a changes:

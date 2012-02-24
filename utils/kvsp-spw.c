@@ -46,8 +46,6 @@ int main(int argc, char *argv[]) {
     set = kv_set_new();
     kv_adds(set, "from", exe);
     kv_adds(set, "when", timebuf);
-    /* add a binary value having the unix epoch time */
-    kv_add(set, "time", strlen("time"), (char*)&t32, sizeof(t32));
     kv_adds(set, "iter", iterbuf);
     kv_spool_write(sp,set);
     kv_set_free(set);

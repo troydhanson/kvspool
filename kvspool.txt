@@ -25,6 +25,9 @@ to use, but reflects a particular set of design goals.
 Platform
 ~~~~~~~~
 Kvspool is written for Linux, and has support for C, Perl, Python and Java.
+The C library does not depend on any other libraries; if you have ZeroMQ (2.x
+or 3.x) installed and the Jansson library installed, additional utilities for network
+replication of spools are built.
 
 License
 ~~~~~~~
@@ -58,18 +61,18 @@ benefits that confers (for example, the ability to copy it easily) and yet still
 event-driven model where the reader is woken up only when new data is available? (Yes, we
 can, using inotify). The wish list became,
 
-1. stream should be a file (can be on a ram disk)
-1. reader should be event driven 
-1. let the user configure how much disk space to allocate to the stream 
-1. drop old data (whether its read or unread) when the stream fills up
-1. put framing into the stream so that we can read and write whole messages
-1. use key-value sets (aka a dictionary or hash) as the data unit
-1. copy a "live" data stream to a frozen "snapshot"
-1. support rewind and replay.
-1. work locally or over a network.
-1. insulate writer from reader (so much that either can be absent)
-1. work with many languages.
-1. easy to use.
+#. stream should be a file (can be on a ram disk)
+#. reader should be event driven 
+#. let the user configure how much disk space to allocate to the stream 
+#. drop old data (whether its read or unread) when the stream fills up
+#. put framing into the stream so that we can read and write whole messages
+#. use key-value sets (aka a dictionary or hash) as the data unit
+#. copy a "live" data stream to a frozen "snapshot"
+#. support rewind and replay.
+#. work locally or over a network.
+#. insulate writer from reader (so much that either can be absent or sporadically present)
+#. work with many languages.
+#. easy to use.
 
 Kvspool does these things. It's not a sophisticated suite. It's just a tool in the
 Unix tradition that does one thing and tries to do it well. 
@@ -105,6 +108,7 @@ You can clone kvspool from github:
 To build it:
 
   % cd kvspool
+  % # if the 'configure' script does not yet exist, run ./bootstrap
   % ./configure
   % make
   % sudo make install
@@ -329,7 +333,8 @@ Utilities
 Basic 
 ~~~~~
 
-[width="90%",cols=10m,50m",grid="none",options="header"]
+.Basic utilities
+[width="90%",cols="10m,50m",grid="none",options="header"]
 |===============================================================================
 |command     | example 
 |kvsp-size   | kvsp-size -s 1G spool
@@ -357,14 +362,16 @@ maintain the tee.
 Network
 ~~~~~~~
 
-The following utilities require ZeroMQ libraries on the system in order to be built.
+The network utilities keep a local spool continuously replicated to a remote spool.
 
-[width="90%",cols=10m,50m",grid="none",options="header"]
+NOTE: The following utilities require ZeroMQ and Jansson libraries on the system in order to be built.
+
+.Network utilities
+[width="90%",cols="10m,50m",grid="none",options="header"]
 |===============================================================================
 |command     | example 
 |kvsp-pub    | kvsp-pub -d spool tcp://192.168.1.9:1110
 |kvsp-sub    | kvsp-sub -d spool tcp://192.168.1.9:1110
-|kvsp-json   | kvsp-json -d spool tcp://192.168.1.9:2220
 |===============================================================================
 
 The `kvsp-pub` and `kvsp-sub` utilities publish a source spool to a remote spool.
@@ -379,16 +386,22 @@ in regular mode a publisher to which no subscriber is connected will drop frames
 the special mode, the publisher retains data until a subscriber connects. (The data
 retention capacity is still limited by the `kvsp-size`.)
 
-The `kvsp-json` utility "exports" a spool into JSON-formatted ZeroMQ messages. Any
-programming language (for example C#, etc) that supports ZeroMQ can connect a PULL socket
-(in Zero MQ nomenclature) to the specified endpoint and receive JSON for each spool frame.
-The `kvsp-json` utility acts as the reader on the stream. If multiple ZeroMQ clients
-connect, each receives a "1/n" share of the spool frames.
+Interoperability via JSON
+^^^^^^^^^^^^^^^^^^^^^^^^^
+The `kvsp-pub` utility "exports" a spool into JSON-formatted ZeroMQ messages. Any
+programming language (for example C#, etc) that supports ZeroMQ can connect a SUB or PULL
+socket (in Zero MQ nomenclature) to the specified endpoint and receive JSON for each spool
+frame.  This is useful for interoperating with programs that fall outside of the spool
+ecosystem.  Similarly, `kvsp-sub` produces a spool from JSON-formatted ZeroMQ messages;
+therefore any programming language that can send JSON over a ZeroMQ PUB or PUSH socket can
+publish to a spool.
+
 
 Other
 ~~~~~
 
-[width="90%",cols=10m,50m",grid="none",options="header"]
+.Other utilities
+[width="90%",cols="10m,50m",grid="none",options="header"]
 |===============================================================================
 |command     | example 
 |kvsp-spr    | kvsp-spr -B 0 spool
@@ -474,8 +487,25 @@ The http://troydhanson.github.com/pmtr/[pmtr process manager site] has more info
 
 Interoperability 
 ~~~~~~~~~~~~~~~~
-For platforms without kvspool support (such as Windows) the `kvsp-json` utility can
-publish spool frames in JSON, as messages over a ZeroMQ "pull" socket.
+For platforms without kvspool support (such as Windows) the `kvsp-pub` utility can
+publish spool frames in JSON, as messages over a ZeroMQ "pub/sub" or "push/pull" socket.
+This is also useful for any programs that operate outside of the spool environment.
+An example of receiving JSON over ZeroMQ (in Perl) is shown below- this program can be
+used to receive the output of `kvsp-pub -s`.
+
+  #!/usr/bin/perl
+  use Data::Dumper;
+  use JSON;
+  use ZeroMQ qw/:all/;
+
+  my $ctx = ZeroMQ::Context->new;
+  my $sock = $ctx->socket(ZMQ_PULL);
+  $sock->connect("tcp://127.0.0.1:1234");
+
+  for(;;) {
+    my $d = $sock->recv()->data();
+    print Dumper from_json($d), "\n";
+  }
 
 Roadmap 
 -------
@@ -495,13 +525,6 @@ More sweeping ideas for a possible future "v2" rewrite:
 * Support multi-writer, multi-reader (see multi_future.txt)
 * Replace segemented data files with one memory mapped, circular file
 * Use JSON internally
-
-Eventually
-==========
-JSON push (libjansson in configure test)
-Credits file (Trevor JJ JT)
-make spw write non-binary time
-pictures?
 
 // vim: set tw=90 wm=2 syntax=asciidoc: 
 

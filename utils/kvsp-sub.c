@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <zmq.h>
+#include <jansson.h>
 
 #include "kvspool_internal.h"
 #include "utstring.h"
@@ -33,12 +34,39 @@ void usage(char *exe) {
 #else
 #define zmq_rcvmore_t int
 #endif
+
+int json_to_frame(void *sp, void *set, void *msg_data, size_t msg_len) {
+  int rc=-1;
+  json_t *json;
+  json_error_t error;
+  const char *key;
+  json_t *value;
+
+  json = json_loadb(msg_data, msg_len, 0, &error);
+  if (!json) {
+    fprintf(stderr,"JSON decoding error: %s\n", error.text);
+    goto done;
+  }
+
+  kv_set_clear(set);
+  json_object_foreach(json, key, value) {
+    kv_adds(set, key, json_string_value(value));
+  }
+  kv_spool_write(sp, set);
+
+  rc = 0;
+
+ done:
+  if (json) json_decref(json);
+  return rc;
+}
+
 int main(int argc, char *argv[]) {
 
   zmq_rcvmore_t more; size_t more_sz = sizeof(more);
   char *exe = argv[0], *filter = "";
   int part_num,opt,rc=-1;
-  void *msg_data, *sp;
+  void *msg_data, *sp, *set=NULL;
   size_t msg_len;
   zmq_msg_t part;
 
@@ -55,6 +83,7 @@ int main(int argc, char *argv[]) {
   if (!pub) usage(exe);
   sp = kv_spoolwriter_new(dir);
   if (!sp) usage(exe);
+  set = kv_set_new();
 
   if ( !(context = zmq_init(1))) goto done;
   if ( !(socket = zmq_socket(context, pull_mode?ZMQ_PULL:ZMQ_SUB))) goto done;
@@ -79,7 +108,7 @@ int main(int argc, char *argv[]) {
       msg_len = zmq_msg_size(&part);
        
       switch(part_num) {  /* part 1 has serialized frame */
-        case 1: if (kv_write_raw_frame(sp,msg_data,msg_len)) goto done; break;
+        case 1: if (json_to_frame(sp,set,msg_data,msg_len)) goto done; break;
         default: assert(0); 
       }
 
@@ -95,6 +124,7 @@ int main(int argc, char *argv[]) {
   if(socket) zmq_close(socket);
   if(context) zmq_term(context);
   kv_spoolwriter_free(sp);
+  if (set) kv_set_free(set);
   return rc;
 }
 
