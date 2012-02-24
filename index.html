@@ -1,0 +1,1484 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.6" />
+<title>kvspool: a tool for data streams</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+pre {
+  padding: 0;
+  margin: 0;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+tt {
+  font-family: monospace;
+  font-size: inherit;
+  color: navy;
+}
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+.monospaced {
+  font-family: monospace;
+  font-size: inherit;
+  color: navy;
+}
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install();
+/*]]>*/
+</script>
+</head>
+<body class="article">
+<div id="header">
+<h1>kvspool: a tool for data streams</h1>
+<span id="author">Troy D. Hanson</span><br />
+<span id="email"><tt>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</tt></span><br />
+<span id="revnumber">version 0.5,</span>
+<span id="revdate">February 2012</span>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>kvspool: a Linux-based C library used to read and write data streams
+         made of discrete frames; with network replication, snapshot/replay,
+         bounded disk consumption and using key-value sets as the streaming unit.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_kvspool_8217_s_niche">kvspool&#8217;s niche</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Kvspool falls somewhere between the Unix pipe, a record-oriented database and a
+message-passing library. It&#8217;s not any of those, and yet it resembles them all. It&#8217;s simple
+to use, but reflects a particular set of design goals.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+like the Unix pipe, it streams data from one program to another
+</p>
+</li>
+<li>
+<p>
+its data capacity is configurable
+</p>
+</li>
+<li>
+<p>
+the data is disk or ramdisk-resident
+</p>
+</li>
+<li>
+<p>
+the data stream is composed of distinct messages (or "frames")
+</p>
+</li>
+<li>
+<p>
+each "frame" is a set of key-value pairs (aka a "dictionary", "hash", etc)
+</p>
+</li>
+<li>
+<p>
+the data stream can be copied off to a "snapshot" at any time
+</p>
+</li>
+<li>
+<p>
+the data stream or snapshot supports rewind and replay
+</p>
+</li>
+<li>
+<p>
+streams can be sent over a network
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_platform">Platform</h3>
+<div class="paragraph"><p>Kvspool is written for Linux, and has support for C, Perl, Python and Java.
+The C library does not depend on any other libraries; if you have ZeroMQ (2.x
+or 3.x) installed and the Jansson library installed, additional utilities for network
+replication of spools are built.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_license">License</h3>
+<div class="paragraph"><p>See the LICENSE file. Kvspool is free and open source.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_motivation">Motivation</h3>
+<div class="paragraph"><p>It all started with a sensor. Like any sensor this one produced an endless series of
+measurements. The measurements were fed into another process. How? With a Unix pipe:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>sensor | analyzer</tt></pre>
+</div></div>
+<div class="paragraph"><p>Beatiful and concise, but:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+what happens if <em>sensor</em> produces data faster than <em>analyzer</em> can read it?
+</p>
+</li>
+<li>
+<p>
+What happens to <em>sensor</em> if <em>analyzer</em> crashes?
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>If <em>sensor</em> is doing something important- the pipe is not robust because <em>sensor</em> gets
+<em>blocked</em> (put to sleep) if <em>analyzer</em> reads the pipe too slowly-- and worse yet,
+any bugs that crash <em>analyzer</em> thereby break the pipe and crash <em>sensor</em> too.</p></div>
+<div class="sect3">
+<h4 id="_in_search_of">In search of</h4>
+<div class="paragraph"><p>The <tt>sensor | analyzer</tt> pipeline could be replaced many ways: for example <em>sensor</em> could
+write to a database, which <em>analyzer</em> could poll periodically. But Unix people dislike
+polling. It says "I couldn&#8217;t figure out an event-driven solution to this problem". We
+could use shared memory, and semaphores, etc. However, there&#8217;s also a Unix mindset that
+says "everything is a file"-- so why shouldn&#8217;t our data stream be one too?  In other
+words, can we put the data stream into a visible entry in the file system, with all the
+benefits that confers (for example, the ability to copy it easily) and yet still retain an
+event-driven model where the reader is woken up only when new data is available? (Yes, we
+can, using inotify). The wish list became,</p></div>
+<div class="paragraph"><p>#. stream should be a file (can be on a ram disk)
+#. reader should be event driven
+#. let the user configure how much disk space to allocate to the stream
+#. drop old data (whether its read or unread) when the stream fills up
+#. put framing into the stream so that we can read and write whole messages
+#. use key-value sets (aka a dictionary or hash) as the data unit
+#. copy a "live" data stream to a frozen "snapshot"
+#. support rewind and replay.
+#. work locally or over a network.
+#. insulate writer from reader (so much that either can be absent or sporadically present)
+#. work with many languages.
+#. easy to use.</p></div>
+<div class="paragraph"><p>Kvspool does these things. It&#8217;s not a sophisticated suite. It&#8217;s just a tool in the
+Unix tradition that does one thing and tries to do it well.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_what_does_it_look_like">What does it look like?</h4>
+<div class="paragraph"><p>Kvspool is a C library (and language bindings) and a set of command-line utilities. The
+command-line utilities are used to initialize a stream of a certain capacity, to snapshot
+or rewind a stream, to watch its status, set up network replication, and so on. The API
+used to read and write the stream is extremely simple: key-value sets (dictionary or hash
+are common names for this data structure) are simply read from the stream or written to it.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_the_best_feature">The best feature</h4>
+<div class="paragraph"><p>Perhaps more than any other feature, the ability to copy a "live" data stream to an
+offline "snapshot", and then replay it as often as necessary, for testing or algorithm
+development, can be very valuable. Testing with a consistent data set becomes easy.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_does_kvspool_keep_data_after_its_been_read">Does kvspool keep data after its been read?</h4>
+<div class="paragraph"><p>Yes, for two reasons. Kvspool keeps data, even after its been read, up to the maximum
+size for the spool, at which point old data is attritioned to make room for new.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+This effectively "reserves" space on the disk for the spool
+</p>
+</li>
+<li>
+<p>
+The spool can be copied off and replayed
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_getting_kvspool">Getting kvspool</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>You can clone kvspool from github:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% git clone git://github.com/troydhanson/kvspool.git</tt></pre>
+</div></div>
+<div class="paragraph"><p>To build it:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% cd kvspool
+% # if the 'configure' script does not yet exist, run ./bootstrap
+% ./configure
+% make
+% sudo make install</tt></pre>
+</div></div>
+<div class="paragraph"><p>This builds and installs the C library and utilities, and if the prerequisite packages
+are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based utilities.</p></div>
+<div class="sect2">
+<h3 id="_resources_amp_help">Resources &amp; Help</h3>
+<div class="paragraph"><p>News about software updates are posted to the author&#8217;s blog: <a href="http://tkhanson.net/blog">http://tkhanson.net/blog</a>.
+Contact the author directly at <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a> if you have questions or other issues.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_basics">Basics</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>A note on terminology: the spool is the data stream, and the spool directory is where
+we store it. The word <em>spool</em> is used both ways in this document.</p></div>
+<div class="sect2">
+<h3 id="_create_a_spool">Create a spool</h3>
+<div class="paragraph"><p>A spool is a directory (well, it resides entirely in a directory). To make one, just make
+a directory. You can name it anything:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% mkdir spool</tt></pre>
+</div></div>
+<div class="paragraph"><p>It is recommended that you set its capacity:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% kvsp-size -s 1G spool</tt></pre>
+</div></div>
+<div class="paragraph"><p>That configures the spool to store a rolling window of 1 gigabyte of data. You can use K,
+M, G, or T suffixes.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_write_data_to_spool">Write data to spool</h3>
+<div class="paragraph"><p>We show a simple example of using the spool in Perl, Python and C here.</p></div>
+<div class="literalblock">
+<div class="title">Perl</div>
+<div class="content">
+<pre><tt>use KVSpool;
+my $h = {'day' =&gt; 'Wednesday', 'user' =&gt; 'Troy'};
+my $v = KVSpool-&gt;new("spool");
+$v-&gt;write($h);</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="title">Python</div>
+<div class="content">
+<pre><tt>import kvpy
+d = {"day":"Wednesday","user":"Troy"}
+kvpy.kvpy_write("spool",d)</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="title">C</div>
+<div class="content">
+<pre><tt>#include "kvspool.h"
+...
+void *sp = kv_spoolwriter_new("spool");
+void *set = kv_set_new();
+kv_adds(set, "day", "Wednesday");
+kv_adds(set, "user", "Troy");
+kv_spool_write(sp,set);
+kv_set_free(set);
+kv_spoolwriter_free(sp);</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_read_data_from_spool">Read data from spool</h3>
+<div class="literalblock">
+<div class="title">Perl</div>
+<div class="content">
+<pre><tt>use KVSpool;
+my $v = KVSpool-&gt;new("spool");
+my $h = $v-&gt;read();</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="title">Python</div>
+<div class="content">
+<pre><tt>import kvpy
+d = kvpy.kvpy_read("spool")</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="title">C</div>
+<div class="content">
+<pre><tt>#include "kvspool.h"
+...
+void *sp = kv_spoolreader_new("spool");
+void *set = kv_set_new();
+kv_spool_read(sp,set,1);
+...
+kv_set_free(set);
+kv_spoolreader_free(sp);</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_streaming">Streaming</h3>
+<div class="paragraph"><p>"Streaming data" between two programs just amounts to creating a spool directory
+for writer and reader to share.</p></div>
+<div class="sect3">
+<h4 id="_quick_test">Quick test</h4>
+<div class="paragraph"><p>If you want to quickly try kvspool out with some meaningless data, there&#8217;s a pair
+of included utilities you can use. <tt>kvsp-spw</tt> writes some test data. You can use
+<tt>kvsp-spr</tt> to read it (or to manually look at any spool):</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% mkdir junk
+% kvsp-spr junk</tt></pre>
+</div></div>
+<div class="paragraph"><p>Run <tt>kvsp-spw junk</tt> a few times in another window and watch as the reader prints it.
+These test utilities use the C API.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_blocking">Blocking</h4>
+<div class="paragraph"><p>In kvspool, writers never block, and readers always block (except in the C API where a
+non-blocking read is available).</p></div>
+</div>
+<div class="sect3">
+<h4 id="_string_keys_and_values">String keys and values</h4>
+<div class="paragraph"><p>These examples use string keys and string values. Use base64-encoding if binary values
+are needed.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_1_to_1_or_0_1">1-to-1 (or 0-1)</h4>
+<div class="paragraph"><p>A spool can have only one writer and one reader at a time. They can exit and restart
+without any impact on each other. Either (writer or reader) can also be absent. If there
+is no writer, a reader just blocks (assuming the spool is drained) waiting for new data.
+If there is no reader, a writer just populates the spool for any future reader.</p></div>
+<div class="paragraph"><p>There are included utilities to tee a spool or do network fan-out, so the 1-1 limitation
+is easy to overcome when multiple independent readers each need their own copy of a spool.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_persistent_read_position">Persistent read position</h4>
+<div class="paragraph"><p>The spool records the reader position internally. If a reader exits, then restarts, it
+picks up where it left off. (The <tt>kvsp-reset</tt> utility can be used to reset the reader
+position to the beginning, for replay purposes).</p></div>
+<div class="paragraph"><p>Because the read position is stored in the spool, you can see it using <tt>kvsp-status</tt>.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% kvsp-status spool
+39%</tt></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_data_loss">Data loss</h4>
+<div class="paragraph"><p>The writer treats the spool as, essentially, a circular buffer of a finite size. So, when
+it fills up, the oldest data is deleted, to make room for new. This happens regardless of
+whether the data has been read. A reader that is running continuously, and is "fast
+enough" to keep up with a writer, need not experience any data loss. But by design, the
+bounded capacity of the spool means that persistently slow or unavailable readers may lose
+the opportunity to read every frame. In other words a reader that reads one frame, exits
+and reads another frame much later may never know that intervening frames were discarded.
+Data loss is a deliberate "feature" of kvspool (instead of blocking the writer or having
+to buffer possibly-infinite amounts of data).</p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_api">API</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_c_c">C/C++</h3>
+<div class="paragraph"><p>Programs written against the kvspool API can be linked with -lkvspool.</p></div>
+<div class="sect3">
+<h4 id="_reader_api">Reader API</h4>
+<div class="literalblock">
+<div class="content">
+<pre><tt>void *kv_spoolreader_new(const char *dir);
+int kv_spool_read(void*sp, void *set, int blocking);
+void kv_spoolreader_free(void*);</tt></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_writer_api">Writer API</h4>
+<div class="literalblock">
+<div class="content">
+<pre><tt>void *kv_spoolwriter_new(const char *dir);
+int kv_spool_write(void*sp, void *set);
+void kv_spoolwriter_free(void*);</tt></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_dictionary_api">Dictionary API</h4>
+<div class="paragraph"><p>The <tt>void *set</tt> in the C API is a dictionary data structure in C.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>void* kv_set_new(void);
+void kv_set_free(void*);
+void kv_set_clear(void*);
+void kv_set_dump(void *set,FILE *out);
+void kv_add(void*set, const char *key, int klen, const char *val, int vlen);
+#define kv_adds(set, key, val) kv_add(set,key,strlen(key),val,strlen(val))
+kv_t *kv_get(void*set, char *key);
+int kv_len(void*set);
+kv_t *kv_next(void*set,kv_t *kv);</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>typedef struct {
+  char *key;
+  int klen;
+  char *val;
+  int vlen;
+  /* other internal fields not shown */
+} kv_t;</tt></pre>
+</div></div>
+<div class="paragraph"><p>A C program can iterate through all the keys/values like:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>kv_t *kv = NULL;
+while ( (kv = kv_next(set, kv))) {
+  printf("key is %s\n", kv-&gt;key);
+  printf("value is %s\n", kv-&gt;val);
+}</tt></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_reset_api">Reset API</h3>
+<div class="paragraph"><p>This is the programmatic equal of the <tt>kvsp-reset</tt> command:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>void sp_reset(const char *dir);</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_perl">Perl</h3>
+<div class="paragraph"><p>In Perl this is how to use the module and open a spool for reading or writing:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>use KVSpool;
+my $v = KVSpool-&gt;new("spool");</tt></pre>
+</div></div>
+<div class="paragraph"><p>Then to read:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>my $h = $v-&gt;read(); # returns a hash reference</tt></pre>
+</div></div>
+<div class="paragraph"><p>Similarly to write:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>$v-&gt;write($h); # where h is a hash reference</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_python">Python</h3>
+<div class="paragraph"><p>As of the current version kvspool only has a procedural interface for Python. If d is a
+dicionary then the API to write or read a frame is simply:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>import kvpy
+kvpy.kvpy_write("spool",d)
+d = kvpy.kvpy_read("spool")</tt></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_utilities">Utilities</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_basic">Basic</h3>
+<div class="tableblock">
+<table rules="none"
+width="90%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 1. Basic utilities</caption>
+<col width="16%" />
+<col width="83%" />
+<thead>
+<tr>
+<th align="left" valign="top">command     </th>
+<th align="left" valign="top"> example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-size</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-size -s 1G spool</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-status</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-status spool</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-reset</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-reset spool</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-tee</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-tee -s spool-in spool-copy1 spool-copy2</tt></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>The <tt>kvsp-size</tt> command is used when a spool directory is first created, to set
+the maximum capacity of the spool. It accepts k/m/b/t suffixes. If <tt>kvsp-size</tt> is
+run later, after the spool already exists and has data, it is resized.</p></div>
+<div class="paragraph"><p>Run <tt>kvsp-status</tt> to see what percentage of the spool has been consumed by a reader.</p></div>
+<div class="paragraph"><p>The <tt>kvsp-reset</tt> command resets the reader position to the beginning (oldest frame) in the
+spool. Use this command in order to "replay" the spooled data. Disconnect (terminate) any
+readers before running this command.</p></div>
+<div class="paragraph"><p>Use <tt>kvsp-tee</tt> to support multiple readers from one input spool. First make a separate
+spool directory for each reader (and use <tt>kvsp-size</tt> to set the capacity of each one);
+then use <tt>kvsp-tee</tt> as the reader on the source spool. It maintains a continuous copy of
+the spool to the multiple destination spools. This command needs to be left running to
+maintain the tee.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_network">Network</h3>
+<div class="paragraph"><p>The network utilities keep a local spool continuously replicated to a remote spool.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The following utilities require ZeroMQ and Jansson libraries on the system in order to be built.</td>
+</tr></table>
+</div>
+<div class="tableblock">
+<table rules="none"
+width="90%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 2. Network utilities</caption>
+<col width="16%" />
+<col width="83%" />
+<thead>
+<tr>
+<th align="left" valign="top">command     </th>
+<th align="left" valign="top"> example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-pub</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-pub -d spool tcp://192.168.1.9:1110</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-sub</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-sub -d spool tcp://192.168.1.9:1110</tt></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>The <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> utilities publish a source spool to a remote spool.
+The publisher listens on the specified TCP port, and the subscribers connect to it.
+More than one subscriber may run simultaneously. (The <tt>kvsp-pub</tt> commands acts as the
+reader to the local stream, while <tt>kvsp-sub</tt> acts as the writer on remote stream.)</p></div>
+<div class="paragraph"><p>Giving the <tt>-s</tt> flag to both <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> changes the operation from
+"pub-sub" to "push-pull" mode (in ZeroMQ nomenclature). In this special <tt>-s</tt> mode, the
+<tt>kvsp-sub</tt> instances each receive a "1/n" share of the data rather than full take.  Also,
+in regular mode a publisher to which no subscriber is connected will drop frames but in
+the special mode, the publisher retains data until a subscriber connects. (The data
+retention capacity is still limited by the <tt>kvsp-size</tt>.)</p></div>
+<div class="sect3">
+<h4 id="_interoperability_via_json">Interoperability via JSON</h4>
+<div class="paragraph"><p>The <tt>kvsp-pub</tt> utility "exports" a spool into JSON-formatted ZeroMQ messages. Any
+programming language (for example C#, etc) that supports ZeroMQ can connect a SUB or PULL
+socket (in Zero MQ nomenclature) to the specified endpoint and receive JSON for each spool
+frame.  This is useful for interoperating with programs that fall outside of the spool
+ecosystem.  Similarly, <tt>kvsp-sub</tt> produces a spool from JSON-formatted ZeroMQ messages;
+therefore any programming language that can send JSON over a ZeroMQ PUB or PUSH socket can
+publish to a spool.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_other">Other</h3>
+<div class="tableblock">
+<table rules="none"
+width="90%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 3. Other utilities</caption>
+<col width="16%" />
+<col width="83%" />
+<thead>
+<tr>
+<th align="left" valign="top">command     </th>
+<th align="left" valign="top"> example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-spr</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-spr -B 0 spool</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-spw</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-spw -i 10 spool</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-mod</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-mod -k key -o spool2 spool</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-speed</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-speed</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>ramdisk</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>ramdisk -c -s 1G /mnt/ramdisk</tt></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>The <tt>kvsp-spr</tt> utility is used to manually read a spool and print its frames to the
+screen. Normally it will block waiting for data once it reaches the end of the spool but
+the <tt>-B 0</tt> (no-block) option tells it to stop reading if the end of the spool is reached.</p></div>
+<div class="paragraph"><p>The <tt>kvsp-spw</tt> utility is used only for testing; it writes a frame of data to the spool
+(or several frames if the <tt>-i</tt> option is used with a count); in the latter mode there is a
+sleep (delay) between each frame, which can be adjusted using the <tt>-d &lt;seconds&gt;</tt> option.</p></div>
+<div class="paragraph"><p>The <tt>kvsp-mod</tt> command "obfuscates" selected values from a source spool to hash values
+in the output spool (named with the <tt>-o</tt> option). For each key named with the <tt>-k</tt> flag,
+its value in the output spool is replaced with a mathematical hash.  The hash numbers
+preserve consistency (so the same input value produces the same output value) but the
+value itself is a meaningless number.</p></div>
+<div class="paragraph"><p>A simple benchmark is performed by the <tt>kvsp-speed</tt> utility to measure read and write
+performance.</p></div>
+<div class="paragraph"><p>The <tt>ramdisk</tt> utility creates, queries or unmounts a ramdisk (a Linux tmpfs filesystem).
+In the form shown in the table above it creates a 1G ramdisk on the <tt>/mnt/ramdisk</tt> mount
+point (this directory must already exist). A ramdisk created this way will appear in the
+<tt>/proc/mounts</tt> listing. If a ramdisk already exists on that mount point, the command does
+nothing.  In create (<tt>-c</tt>) mode, the <tt>-d &lt;dir&gt;</tt> option may be used one or more times to
+specify (as absolute paths) directories to create within the ramdisk.  Using <tt>ramdisk -u
+/mnt/ramdisk</tt> unmounts it.  The <tt>-q</tt> option queries a directory to see if its a ramdisk
+and show its size.  The <tt>ramdisk</tt> utility is included with kvspool because it is often
+convenient to locate a spool on a ramdisk for performance.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_good_practices">Good practices</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_snapshot_and_replay">Snapshot and replay</h3>
+<div class="paragraph"><p>It&#8217;s useful to copy off (snapshot) the spool from a live process for offline development.
+To snapshot a spool, just copy it:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>cp -r spool snapshot</tt></pre>
+</div></div>
+<div class="paragraph"><p>(To avoid the small chance of copying a partially-written frame, suspend the writer before
+copying the spool). With the snapshot copied off, it can now be "replayed" as often as
+needed to develop new versions of the software that reads it.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>kvsp-reset snapshot</tt></pre>
+</div></div>
+<div class="paragraph"><p>Since the snapshot is "canned" real data, but not being written to any longer, it is
+useful as a consistent data set to test new versions of software. The other major benefit
+of canned data is that it&#8217;s easy to take on a laptop, or to a dev environment where the
+writer is not even present, and still do development on the reader programs.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_use_a_ramdisk">Use a ramdisk</h3>
+<div class="paragraph"><p>A ramdisk is a good place to store a spool if there&#8217;s a lot of data going in and out, if
+the data is dispensable in a power outage. For convenience kvspool includes a <tt>ramdisk</tt>
+utility to make a tmpfs ramdisk of a given size, where you can make a spool directory.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>ramdisk -c -s 2G /var/ramdisk
+mkdir /var/ramdisk/spool</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_use_a_daemon_manager">Use a daemon manager</h3>
+<div class="paragraph"><p>For background processes that need to be left running continuously, such as <tt>kvsp-tee</tt>,
+<tt>kvsp-sub</tt>, <tt>kvsp-pub</tt>, configure these to run at startup. The author has a open-source
+process monitor called <tt>pmtr</tt> in which jobs like this can be configured like this:</p></div>
+<div class="paragraph"><p>job {
+  name publisher
+  dir /data/spool
+  cmd /usr/local/bin/kvsp-pub -d spool tcp://192.168.1.9:1110
+  out pub.out
+  err pub.err
+}</p></div>
+<div class="paragraph"><p>The <a href="http://troydhanson.github.com/pmtr/">pmtr process manager site</a> has more information.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_interoperability">Interoperability</h3>
+<div class="paragraph"><p>For platforms without kvspool support (such as Windows) the <tt>kvsp-pub</tt> utility can
+publish spool frames in JSON, as messages over a ZeroMQ "pub/sub" or "push/pull" socket.
+This is also useful for any programs that operate outside of the spool environment.
+An example of receiving JSON over ZeroMQ (in Perl) is shown below- this program can be
+used to receive the output of <tt>kvsp-pub -s</tt>.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>#!/usr/bin/perl
+use Data::Dumper;
+use JSON;
+use ZeroMQ qw/:all/;</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>my $ctx = ZeroMQ::Context-&gt;new;
+my $sock = $ctx-&gt;socket(ZMQ_PULL);
+$sock-&gt;connect("tcp://127.0.0.1:1234");</tt></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>for(;;) {
+  my $d = $sock-&gt;recv()-&gt;data();
+  print Dumper from_json($d), "\n";
+}</tt></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_roadmap">Roadmap</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Kvspool is a young library and has some rough edges.</p></div>
+<div class="paragraph"><p>Rough edges:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The Python API needs an OO wrapper (it only has a procedural one right now).
+</p>
+</li>
+<li>
+<p>
+The Java API needs documentation and unit tests.
+</p>
+</li>
+<li>
+<p>
+The C API has some deprecated functions for binary support
+</p>
+</li>
+<li>
+<p>
+It&#8217;s only been used with Ubuntu 10.x. Build needs to be tested elsewhere.
+</p>
+</li>
+<li>
+<p>
+Test or improve Autoconf detection for Perl, Python, Java, ZeroMQ and Jansson
+</p>
+</li>
+<li>
+<p>
+Expand/rewrite test suite
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>More sweeping ideas for a possible future "v2" rewrite:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Support multi-writer, multi-reader (see multi_future.txt)
+</p>
+</li>
+<li>
+<p>
+Replace segemented data files with one memory mapped, circular file
+</p>
+</li>
+<li>
+<p>
+Use JSON internally
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Version 0.5<br />
+Last updated 2012-02-24 01:54:21 EST
+</div>
+</div>
+</body>
+</html>
