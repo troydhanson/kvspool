@@ -1,0 +1,62 @@
+Design concepts for "v2" rewrite of kvspool
+-------------------------------------------
+1. Support multi-writer, multi-reader from same spool
+2. Use a memory-mapped file for reading/writing spool data so that:
+   (1) I/O occurs through shared memory even without a ramdisk, while
+   (2) data is still persisted back to disk 
+3. Support for multi-writers requires a synchronization mechanism.
+   (1) This is one of the functions of the "control file".
+     (a) this file exists alongside the spool data file
+     (b) by flock'ing it (or fcntl lock on a region of it), one writer
+         can gain exclusive write (which applies to the spool data file too);
+         a second level of record-locking using fcntl lock on the spool data
+         file can act as a redundant safeguard
+     (c) the control file has the min and max sequence number in it
+     (d) the max sequence number is just the "frame number" of the next 
+         frame to be written
+     (e) the min sequence number is incremented (sometimes by an increment
+         greater than one) when the writer is overwriting previous frame(s).
+         It's purpose is explained under the "Support for multi-readers" later.
+     (f) The offset of the min and max frames are also stored 
+     (g) The control block may also contain a few time-series on write rates.
+     (i) It would also be possible to place the control file into the data 
+         spool itself, in which case its a "control block" of fixed size
+         at the beginning; this would eliminate some failure modes and 
+         reduce the file descriptor bookkeeping by one
+4. Spool data file is a single, large, circular data buffer
+     (a) It is pre-created prior to data being written to reserve the space
+     (b) This requires that it be a non-sparse file
+     (c) It is used as a cyclic buffer 
+     (d) When the end is reached, a new frame may not quite fit at the end,
+         in which case the frame starts at the beginning of the file; but 
+         this requires that the frame's content-length may differ from its 
+         stored length (so that the frame that ends up at the end of the 
+         buffer can be adjusted to consume the full remaining space).
+     (e) Thus the frame format is
+         (1) sequence number
+         (2) storage length
+         (3) content length
+         (4) data (in JSON)
+     (f) The single large data file replaces the kvspool-v1 approach
+         where ten sequenced files contain the spool data, and old files
+         are deleted as new files are written. The v1 logic requires 
+         detection of new files in the spool, although its advantegous
+         in that read/write through standard (non-mmap) calls does not
+         swap in the entire data spool as the v2 approach may tend to do
+5. Support for multi-readers
+   (1) since readers that are inactive for a long time may get to the point
+       that their next read position is potentially invalid (due to a 
+       writer wraparound that puts a new frame into the read area),
+       (a) the reader that is entering the 'read' state will first 
+           lock the control file, acquire the minimum sequence number
+           to see if its exceeded its own read position
+            (i) If it has, then the reader has experienced frame loss
+                and adjusts its next-read-position to the min frame
+            (ii) if not, the reader can then record-lock the spool
+                 data and read the next frame
+            (iii) note that if the max sequence number is the same as
+                 the read position, then the reader needs to block
+                 (by placing inotify on the control file, unlocking
+                 and going into a select/epoll).
+    (2) If reader needs persistence for its read position it should 
+        store its own sequence number and identifier in the spool dir

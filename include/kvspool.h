@@ -51,7 +51,7 @@ void sp_attrition(char *dir);
  *****************************************************************************/
 typedef struct { int pct_consumed; } kv_stat_t;
 int kv_stat(const char *dir, kv_stat_t *stats);
-void sp_reset(const char *dir);
+void sp_rewind(const char *dir);
 
 typedef struct {
   size_t dir_max;

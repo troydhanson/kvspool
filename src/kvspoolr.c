@@ -331,7 +331,7 @@ void kv_spoolreader_free(void *_sp) {
   free(sp);
 }
 
-void sp_reset(const char *dir) {
+void sp_rewind(const char *dir) {
   char *path, **p;
   int sr_fd,rp;
 

@@ -1,7 +1,7 @@
 AC_PREREQ(2.59)
 
 AC_INIT([kvspool], [1.0], [tdh@tkhanson.net])
-AC_CONFIG_SRCDIR(kvspool.c)
+AC_CONFIG_SRCDIR(src/kvspool.c)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS(config/config.h)
 AM_INIT_AUTOMAKE
@@ -24,6 +24,6 @@ AM_CONDITIONAL(HAVE_PYTHON,test "x$pythonexists" = "xyes")
 AC_CHECK_PROG(PERL,perl,perl)
 AM_CONDITIONAL(HAVE_PERL,test "x$PERL" != "x") 
 
-AC_CONFIG_FILES(Makefile utils/Makefile)
+AC_CONFIG_FILES(Makefile src/Makefile utils/Makefile)
 AC_OUTPUT
 

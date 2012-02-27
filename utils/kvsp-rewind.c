@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
   if (optind < argc) dir=argv[optind++];
   else usage(exe);
 
-  sp_reset(dir);
+  sp_rewind(dir);
   return 0;
 }
 

@@ -5,7 +5,7 @@ kvsp-pub
 kvsp-speed
 kvsp-status
 kvsp-mod
-kvsp-reset
+kvsp-rewind
 kvsp-spr
 kvsp-spw
 *.o

@@ -3,56 +3,96 @@ kvspool: a tool for data streams
 Troy D. Hanson <tdh@tkhanson.net>
 v0.5, February 2012
 
-kvspool: a Linux-based C library used to read and write data streams
+kvspool (a key-value spool):: 
+         a Linux-based C library used to read and write data streams
          made of discrete frames; with network replication, snapshot/replay,
          bounded disk consumption and using key-value sets as the streaming unit.
 
 kvspool's niche
 ---------------
-Kvspool falls somewhere between the Unix pipe, a record-oriented database and a
-message-passing library. It's not any of those, and yet it resembles them all. It's simple
-to use, but reflects a particular set of design goals.
+Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message-passing
+library. It's not quite any of them, yet resembles them all. It reflects a personal set
+of design goals.
 
-* like the Unix pipe, it streams data from one program to another
-* its data capacity is configurable
-* the data is disk or ramdisk-resident
-* the data stream is composed of distinct messages (or "frames")
-* each "frame" is a set of key-value pairs (aka a "dictionary", "hash", etc)
-* the data stream can be copied off to a "snapshot" at any time
-* the data stream or snapshot supports rewind and replay 
-* streams can be sent over a network
+* the spool is used to "stream" (transmit) data frames from one program to another 
+* the spool frames are each a "hash"- a set of key-value pairs (aka a dictionary)
+* the spool writer never blocks, even if the reader is slow, absent, or crashes
+* the spool is a disk- or ramdisk-resident buffer of a configurable size
+* the spool reader gets frames from the writer via the file system only
+* the spool reader can exit, restart, and "catch up" with the writer
+* the spool reader blocks (waiting for new data) when its caught up
+* the spool reader loses data if its absent/offline/slow enough
+* the spool frames remain on disk til their space is reclaimed  
+* the spool can be copied off to a "snapshot" at any time
+* the spool supports rewind and replay 
+* the spool can be sent over a network
+
+Sneak peak
+~~~~~~~~~~
+Here's an example of writing from Perl and reading from C.
+
+[options="header"]
+|===============================================================================
+| Perl writer                         |  C reader
+| use KVSpool;                        |  #include "kvspool.h"
+| my $v = KVSpool->new("spool");      |  void *sp = kv_spoolreader_new("spool");
+| my $h = {'day'=>'Wed','temp'=>37};  |  void *set = kv_set_new();
+| $v->write($h);                      |  kv_spool_read(sp,set,1);
+|===============================================================================
+
+Rewind and replay
+~~~~~~~~~~~~~~~~~
+Kvspool keeps the data frames, even after they've been read-- til space needs to be
+reclaimed. (So the spool is a like a long reel of tape spliced together at the ends).
+There are several nice outcomes of this:
+
+* You have a history, or a "rear-view window" of the stream from writer to reader
+* Because you have this history of the stream, you can copy it off 
+* You can take it back to a development or test environment 
+* You can "rewind" and "replay" the spool for testing
+
+Canned data
+^^^^^^^^^^^
+For developers, kvspool can be a convenient way to take "canned" data from a production
+environment. Just copy the spool. Now the data is canned. The developer can now take it
+on a laptop (where the writer is not even necessary), rewind it, and use it as input.
 
 Platform
 ~~~~~~~~
 Kvspool is written for Linux, and has support for C, Perl, Python and Java.
-The C library does not depend on any other libraries; if you have ZeroMQ (2.x
-or 3.x) installed and the Jansson library installed, additional utilities for network
-replication of spools are built.
+While the C library does not depend on any other libraries, it's recommended to have if
+you have *ZeroMQ* (2.x or 3.x) and the *Jansson* library installed, additional utilities for
+network replication of spools are built.
 
 License
 ~~~~~~~
-See the LICENSE file. Kvspool is free and open source.
+See the link:LICENSE[LICENSE] file. Kvspool is free and open source.
 
-Motivation
-~~~~~~~~~~
-It all started with a sensor. Like any sensor this one produced an endless series of
+Resources & Help 
+~~~~~~~~~~~~~~~~
+News about software updates are posted to the author's blog: http://tkhanson.net/blog.
+Contact the author directly at tdh@tkhanson.net if you have questions or other issues.
+
+History & Motivation
+~~~~~~~~~~~~~~~~~~~~
+It started with a sensor. Like any sensor this one produced an endless series of
 measurements. The measurements were fed into another process. How? With a Unix pipe: 
 
   sensor | analyzer
 
 Beatiful and concise, but:
 
-* what happens if 'sensor' produces data faster than 'analyzer' can read it?
-* What happens to 'sensor' if 'analyzer' crashes?
+* what happens if `sensor` produces data faster than `analyzer` can read it?
+* What happens to `sensor` if `analyzer` crashes?
 
-If 'sensor' is doing something important- the pipe is not robust because 'sensor' gets
-'blocked' (put to sleep) if 'analyzer' reads the pipe too slowly-- and worse yet,
-any bugs that crash 'analyzer' thereby break the pipe and crash 'sensor' too.
+If `sensor` is doing something important- the pipe is not robust because `sensor` gets
+blocked (put to sleep) if 'analyzer' reads the pipe too slowly-- and worse yet,
+any bugs that crash '`nalyzer` thereby break the pipe and crash `sensor` too.
 
 In search of 
 ^^^^^^^^^^^^
-The `sensor | analyzer` pipeline could be replaced many ways: for example 'sensor' could
-write to a database, which 'analyzer' could poll periodically. But Unix people dislike
+The `sensor | analyzer` pipeline could be replaced many ways: for example `sensor` could
+write to a database, which `analyzer` could poll periodically. But Unix people dislike
 polling. It says "I couldn't figure out an event-driven solution to this problem". We
 could use shared memory, and semaphores, etc. However, there's also a Unix mindset that
 says "everything is a file"-- so why shouldn't our data stream be one too?  In other
@@ -61,18 +101,18 @@ benefits that confers (for example, the ability to copy it easily) and yet still
 event-driven model where the reader is woken up only when new data is available? (Yes, we
 can, using inotify). The wish list became,
 
- #. stream should be a file (can be on a ram disk)
- #. reader should be event driven 
- #. let the user configure how much disk space to allocate to the stream 
- #. drop old data (whether its read or unread) when the stream fills up
- #. put framing into the stream so that we can read and write whole messages
- #. use key-value sets (aka a dictionary or hash) as the data unit
- #. copy a "live" data stream to a frozen "snapshot"
- #. support rewind and replay.
- #. work locally or over a network.
- #. insulate writer from reader (so much that either can be absent or sporadically present)
- #. work with many languages.
- #. easy to use.
+* stream should be a file (can be on a ram disk)
+* reader should be event driven 
+* let the user configure how much disk space to allocate to the stream 
+* drop old data (whether its read or unread) when the stream fills up
+* put framing into the stream so that we can read and write whole messages
+* use key-value sets (aka a dictionary or hash) as the data unit
+* copy a "live" data stream to a frozen "snapshot"
+* support rewind and replay.
+* work locally or over a network.
+* insulate writer from reader (so much that either can be absent or sporadically present)
+* work with many languages.
+* easy to use.
 
 Kvspool does these things. It's not a sophisticated suite. It's just a tool in the
 Unix tradition that does one thing and tries to do it well. 
@@ -84,12 +124,6 @@ command-line utilities are used to initialize a stream of a certain capacity, to
 or rewind a stream, to watch its status, set up network replication, and so on. The API
 used to read and write the stream is extremely simple: key-value sets (dictionary or hash
 are common names for this data structure) are simply read from the stream or written to it.
-
-The best feature
-^^^^^^^^^^^^^^^^
-Perhaps more than any other feature, the ability to copy a "live" data stream to an
-offline "snapshot", and then replay it as often as necessary, for testing or algorithm
-development, can be very valuable. Testing with a consistent data set becomes easy.
 
 Does kvspool keep data after its been read?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -116,11 +150,6 @@ To build it:
 This builds and installs the C library and utilities, and if the prerequisite packages
 are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based utilities.
 
-Resources & Help 
-~~~~~~~~~~~~~~~~
-News about software updates are posted to the author's blog: http://tkhanson.net/blog.
-Contact the author directly at tdh@tkhanson.net if you have questions or other issues.
-
 Basics
 ------
 
@@ -146,17 +175,20 @@ Write data to spool
 We show a simple example of using the spool in Perl, Python and C here.
 
 .Perl
+[source,perl]
   use KVSpool;
   my $h = {'day' => 'Wednesday', 'user' => 'Troy'};
   my $v = KVSpool->new("spool");
   $v->write($h);
 
 .Python
+[source,python]
   import kvpy
   d = {"day":"Wednesday","user":"Troy"}
   kvpy.kvpy_write("spool",d)
 
 .C
+[source,c]
   #include "kvspool.h"
   ...
   void *sp = kv_spoolwriter_new("spool");
@@ -170,15 +202,18 @@ We show a simple example of using the spool in Perl, Python and C here.
 Read data from spool
 ~~~~~~~~~~~~~~~~~~~~
 .Perl
+[source,perl]
   use KVSpool;
   my $v = KVSpool->new("spool");
   my $h = $v->read();
 
 .Python
+[source,python]
   import kvpy
   d = kvpy.kvpy_read("spool")
 
 .C
+[source,c]
   #include "kvspool.h"
   ...
   void *sp = kv_spoolreader_new("spool");
@@ -228,7 +263,7 @@ is easy to overcome when multiple independent readers each need their own copy o
 Persistent read position
 ^^^^^^^^^^^^^^^^^^^^^^^^
 The spool records the reader position internally. If a reader exits, then restarts, it
-picks up where it left off. (The `kvsp-reset` utility can be used to reset the reader
+picks up where it left off. (The `kvsp-rewind` utility can be used to reset the reader
 position to the beginning, for replay purposes).
 
 Because the read position is stored in the spool, you can see it using `kvsp-status`.
@@ -257,12 +292,14 @@ Programs written against the kvspool API can be linked with -lkvspool.
 
 Reader API
 ^^^^^^^^^^
+[source,c]
   void *kv_spoolreader_new(const char *dir);
   int kv_spool_read(void*sp, void *set, int blocking);
   void kv_spoolreader_free(void*);
 
 Writer API
 ^^^^^^^^^^
+[source,c]
   void *kv_spoolwriter_new(const char *dir);
   int kv_spool_write(void*sp, void *set);
   void kv_spoolwriter_free(void*);
@@ -271,6 +308,7 @@ Dictionary API
 ^^^^^^^^^^^^^^
 The `void *set` in the C API is a dictionary data structure in C. 
 
+[source,c]
   void* kv_set_new(void);
   void kv_set_free(void*);
   void kv_set_clear(void*);
@@ -291,6 +329,7 @@ The `void *set` in the C API is a dictionary data structure in C.
 
 A C program can iterate through all the keys/values like:
 
+[source,c]
   kv_t *kv = NULL;
   while ( (kv = kv_next(set, kv))) {
     printf("key is %s\n", kv->key);
@@ -299,23 +338,27 @@ A C program can iterate through all the keys/values like:
 
 Reset API
 ~~~~~~~~~
-This is the programmatic equal of the `kvsp-reset` command:
+This is the programmatic equal of the `kvsp-rewind` command:
 
+[source,c]
   void sp_reset(const char *dir);
 
 Perl
 ~~~~
 In Perl this is how to use the module and open a spool for reading or writing:
 
+[source,perl]
   use KVSpool;
   my $v = KVSpool->new("spool"); 
 
 Then to read:
 
+[source,perl]
   my $h = $v->read(); # returns a hash reference
 
 Similarly to write:
 
+[source,perl]
   $v->write($h); # where h is a hash reference
 
 Python
@@ -323,6 +366,7 @@ Python
 As of the current version kvspool only has a procedural interface for Python. If d is a
 dicionary then the API to write or read a frame is simply:
 
+[source,python]
   import kvpy
   kvpy.kvpy_write("spool",d)
   d = kvpy.kvpy_read("spool")
@@ -339,7 +383,7 @@ Basic
 |command     | example 
 |kvsp-size   | kvsp-size -s 1G spool
 |kvsp-status | kvsp-status spool
-|kvsp-reset  | kvsp-reset spool
+|kvsp-rewind  | kvsp-rewind spool
 |kvsp-tee    | kvsp-tee -s spool-in spool-copy1 spool-copy2
 |===============================================================================
 
@@ -349,7 +393,7 @@ run later, after the spool already exists and has data, it is resized.
 
 Run `kvsp-status` to see what percentage of the spool has been consumed by a reader.
 
-The `kvsp-reset` command resets the reader position to the beginning (oldest frame) in the
+The `kvsp-rewind` command resets the reader position to the beginning (oldest frame) in the
 spool. Use this command in order to "replay" the spooled data. Disconnect (terminate) any
 readers before running this command.
 
@@ -453,7 +497,7 @@ To snapshot a spool, just copy it:
 copying the spool). With the snapshot copied off, it can now be "replayed" as often as
 needed to develop new versions of the software that reads it. 
   
-  kvsp-reset snapshot
+  kvsp-rewind snapshot
 
 Since the snapshot is "canned" real data, but not being written to any longer, it is
 useful as a consistent data set to test new versions of software. The other major benefit
@@ -522,7 +566,7 @@ Rough edges:
 
 More sweeping ideas for a possible future "v2" rewrite:
 
-* Support multi-writer, multi-reader (see multi_future.txt)
+* Support multi-writer, multi-reader (see future.txt)
 * Replace segemented data files with one memory mapped, circular file
 * Use JSON internally
 
