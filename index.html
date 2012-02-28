@@ -816,8 +816,8 @@ kvspool (a key-value spool)
 </dt>
 <dd>
 <p>
-         a Linux-based C library used to read and write data streams
-         made of discrete frames; with network replication, snapshot/replay,
+         a Linux-based C library used to read and write to a data stream, which is
+         comprised of discrete frames; with network replication, snapshot/replay,
          bounded disk consumption and using key-value sets as the streaming unit.
 </p>
 </dd>
@@ -863,12 +863,12 @@ the spool reader can exit, restart, and "catch up" with the writer
 </li>
 <li>
 <p>
-the spool reader blocks (waiting for new data) when its caught up
+the spool reader blocks (waiting for new data) when it&#8217;s caught up
 </p>
 </li>
 <li>
 <p>
-the spool reader loses data if its absent/offline/slow enough
+the spool reader eventually misses data if it&#8217;s persistently offline or slow
 </p>
 </li>
 <li>
@@ -896,7 +896,7 @@ the spool can be sent over a network
 <h3 id="_sneak_peak">Sneak peak</h3>
 <div class="paragraph"><p>Here&#8217;s an example of writing from Perl and reading from C.</p></div>
 <div class="tableblock">
-<table rules="all"
+<table rules="columns"
 width="100%"
 frame="border"
 cellspacing="0" cellpadding="4">
@@ -904,8 +904,8 @@ cellspacing="0" cellpadding="4">
 <col width="50%" />
 <thead>
 <tr>
-<th align="left" valign="top"> Perl writer                         </th>
-<th align="left" valign="top">  C reader</th>
+<th align="left" valign="top"> Perl writer example                 </th>
+<th align="left" valign="top">  C reader example</th>
 </tr>
 </thead>
 <tbody>
@@ -931,8 +931,8 @@ cellspacing="0" cellpadding="4">
 </div>
 <div class="sect2">
 <h3 id="_rewind_and_replay">Rewind and replay</h3>
-<div class="paragraph"><p>Kvspool keeps the data frames, even after they&#8217;ve been read-- til space needs to be
-reclaimed. (So the spool is a like a long reel of tape spliced together at the ends).
+<div class="paragraph"><p>Kvspool keeps the data frames, even after they&#8217;ve been read-- until space needs to be
+reclaimed. So the spool is a like a long reel-to-reel tape spliced together at the ends.
 There are several nice outcomes of this:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -965,10 +965,10 @@ on a laptop (where the writer is not even necessary), rewind it, and use it as i
 </div>
 <div class="sect2">
 <h3 id="_platform">Platform</h3>
-<div class="paragraph"><p>Kvspool is written for Linux, and has support for C, Perl, Python and Java.
-While the C library does not depend on any other libraries, it&#8217;s recommended to have if
-you have <strong>ZeroMQ</strong> (2.x or 3.x) and the <strong>Jansson</strong> library installed, additional utilities for
-network replication of spools are built.</p></div>
+<div class="paragraph"><p>Kvspool is written for Linux 2.6+, and has support for C, Perl, Python and Java.  While
+the C library does not strictly depend on other libraries, it&#8217;s recommended to have
+<strong>ZeroMQ</strong> (2.x or 3.x) and the <strong>Jansson</strong> library installed, to build the additional
+utilities for network replication of spools.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_license">License</h3>
@@ -979,15 +979,20 @@ network replication of spools are built.</p></div>
 <div class="paragraph"><p>News about software updates are posted to the author&#8217;s blog: <a href="http://tkhanson.net/blog">http://tkhanson.net/blog</a>.
 Contact the author directly at <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a> if you have questions or other issues.</p></div>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_kvspool">kvspool</h2>
+<div class="sectionbody">
 <div class="sect2">
 <h3 id="_history_amp_motivation">History &amp; Motivation</h3>
-<div class="paragraph"><p>It started with a sensor. Like any sensor this one produced an endless series of
-measurements. The measurements were fed into another process. How? With a Unix pipe:</p></div>
+<div class="paragraph"><p>Once upon a time, there was a a sensor. Like a typical sensor, this one produced an
+endless series of measurements. These were fed into another process with a Unix pipe:</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>sensor | analyzer</tt></pre>
 </div></div>
-<div class="paragraph"><p>Beatiful and concise, but:</p></div>
+<div class="paragraph"><p>Beatiful and concise, but ask:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1000,109 +1005,98 @@ What happens to <tt>sensor</tt> if <tt>analyzer</tt> crashes?
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>If <tt>sensor</tt> is doing something important- the pipe is not robust because <tt>sensor</tt> gets
-blocked (put to sleep) if <em>analyzer</em> reads the pipe too slowly-- and worse yet,
-any bugs that crash '<tt>nalyzer</tt> thereby break the pipe and crash <tt>sensor</tt> too.</p></div>
-<div class="sect3">
-<h4 id="_in_search_of">In search of</h4>
-<div class="paragraph"><p>The <tt>sensor | analyzer</tt> pipeline could be replaced many ways: for example <tt>sensor</tt> could
-write to a database, which <tt>analyzer</tt> could poll periodically. But Unix people dislike
-polling. It says "I couldn&#8217;t figure out an event-driven solution to this problem". We
-could use shared memory, and semaphores, etc. However, there&#8217;s also a Unix mindset that
-says "everything is a file"-- so why shouldn&#8217;t our data stream be one too?  In other
-words, can we put the data stream into a visible entry in the file system, with all the
-benefits that confers (for example, the ability to copy it easily) and yet still retain an
-event-driven model where the reader is woken up only when new data is available? (Yes, we
-can, using inotify). The wish list became,</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-stream should be a file (can be on a ram disk)
-</p>
-</li>
-<li>
-<p>
-reader should be event driven
-</p>
-</li>
-<li>
-<p>
-let the user configure how much disk space to allocate to the stream
-</p>
-</li>
-<li>
-<p>
-drop old data (whether its read or unread) when the stream fills up
-</p>
-</li>
-<li>
-<p>
-put framing into the stream so that we can read and write whole messages
-</p>
-</li>
-<li>
-<p>
-use key-value sets (aka a dictionary or hash) as the data unit
-</p>
-</li>
-<li>
-<p>
-copy a "live" data stream to a frozen "snapshot"
-</p>
-</li>
-<li>
-<p>
-support rewind and replay.
-</p>
-</li>
-<li>
-<p>
-work locally or over a network.
-</p>
-</li>
-<li>
-<p>
-insulate writer from reader (so much that either can be absent or sporadically present)
-</p>
-</li>
-<li>
-<p>
-work with many languages.
-</p>
-</li>
-<li>
-<p>
-easy to use.
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>Kvspool does these things. It&#8217;s not a sophisticated suite. It&#8217;s just a tool in the
-Unix tradition that does one thing and tries to do it well.</p></div>
-</div>
+<div class="paragraph"><p>For production software, this use of the pipe is not very robust; <tt>sensor</tt> is put to sleep
+if <tt>analyzer</tt> reads the pipe too slowly, and any bugs that crash <tt>analyzer</tt> necessarily
+break the pipe- probably crashing <tt>sensor</tt> too.</p></div>
+<div class="paragraph"><p>The pipeline connecting <tt>sensor</tt> to <tt>analyzer</tt> could be replaced many ways: e.g. with a
+message passing library or even a database.  But kvspool has a different goal: to minimize
+impact on the application. Linking with sophisticated libraries (which likely use threads
+and sockets) was an anti-goal. Instead kvspool only reads and writes to the file system.
+It was important to have an event-driven reader that blocks when waiting for data so that
+CPU is not wasted with polling. The use of the <em>inotify</em> system calls made this possible.</p></div>
 <div class="sect3">
 <h4 id="_what_does_it_look_like">What does it look like?</h4>
-<div class="paragraph"><p>Kvspool is a C library (and language bindings) and a set of command-line utilities. The
-command-line utilities are used to initialize a stream of a certain capacity, to snapshot
-or rewind a stream, to watch its status, set up network replication, and so on. The API
-used to read and write the stream is extremely simple: key-value sets (dictionary or hash
-are common names for this data structure) are simply read from the stream or written to it.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_does_kvspool_keep_data_after_its_been_read">Does kvspool keep data after its been read?</h4>
-<div class="paragraph"><p>Yes, for two reasons. Kvspool keeps data, even after its been read, up to the maximum
-size for the spool, at which point old data is attritioned to make room for new.</p></div>
+<div class="paragraph"><p>Kvspool is a C library and language bindings and a set of command-line utilities. The
+utilities configure the spool capacity, rewind a spool, view its status, set up network
+replication, and so on. The API used to read and write the spool is extremely simple:
+it only involves getting or giving a dictionary (that is, a hash, or set of key-value
+pairs), one at a time. Hence the name, kvspool. The keys and values are always strings.</p></div>
+<div class="sect4">
+<h5 id="_under_the_hood">Under the hood</h5>
+<div class="paragraph"><p>The kvspool library and language bindings do not create threads or open network sockets.
+They only read and write to the file system. The spool itself is just a directory which
+contains files containing the data, and a file storing the reader position. As new data
+comes in, eventually the spool reaches its maximum configured size. At this point, old
+data is deleted (by unlinking the oldest file in the spool). Data is kept spool (even
+after it&#8217;s been read) up to the maximum size of the spool, in order to:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-This effectively "reserves" space on the disk for the spool
+"reserve" that space on the disk
 </p>
 </li>
 <li>
 <p>
-The spool can be copied off and replayed
+so we can copy and replay it
 </p>
 </li>
 </ol></div>
+<div class="paragraph"><p>The spool data is stored in segmented data files that are each about one-tenth of the
+spool&#8217;s maximum configured size. These segments are the unit of attrition. So if a spool
+is configured to store 10GB of data it will grow to that size, then the oldest 1G gets
+deleted to make room for new data, and the cycle continues.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_roadmap">Roadmap</h5>
+<div class="paragraph"><p>Kvspool is a young library and has some rough edges and room for improvement.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The Python API needs an OO wrapper (it only has a procedural one right now).
+</p>
+</li>
+<li>
+<p>
+The Java API needs documentation and unit tests.
+</p>
+</li>
+<li>
+<p>
+The C API has some deprecated functions to support binary values
+</p>
+</li>
+<li>
+<p>
+It&#8217;s only been tested with Ubuntu 10.04
+</p>
+</li>
+<li>
+<p>
+Autoconf detection for Perl, Python, Java should be improved
+</p>
+</li>
+<li>
+<p>
+Test suite is minimal, although kvspool has extensive production use
+</p>
+</li>
+<li>
+<p>
+Support multi-writer, multi-reader (see <a href="future.txt">future.txt</a>)
+</p>
+</li>
+<li>
+<p>
+Replace segemented data files with one memory mapped, circular file
+</p>
+</li>
+<li>
+<p>
+Use JSON internally
+</p>
+</li>
+</ul></div>
+</div>
 </div>
 </div>
 </div>
@@ -1131,27 +1125,27 @@ are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based ut
 <div class="sect1">
 <h2 id="_basics">Basics</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>A note on terminology: the spool is the data stream, and the spool directory is where
-we store it. The word <em>spool</em> is used both ways in this document.</p></div>
 <div class="sect2">
 <h3 id="_create_a_spool">Create a spool</h3>
-<div class="paragraph"><p>A spool is a directory (well, it resides entirely in a directory). To make one, just make
-a directory. You can name it anything:</p></div>
+<div class="paragraph"><p>A spool is a directory- or technically, it resides in a directory. To make a spool, make a
+directory. You can name it anything:</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% mkdir spool</tt></pre>
 </div></div>
-<div class="paragraph"><p>It is recommended that you set its capacity:</p></div>
+<div class="paragraph"><p>It is recommended that you set its capacity. You can use K,M,G,T as suffixes.</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% kvsp-size -s 1G spool</tt></pre>
 </div></div>
-<div class="paragraph"><p>That configures the spool to store a rolling window of 1 gigabyte of data. You can use K,
-M, G, or T suffixes.</p></div>
+<div class="paragraph"><p>In practice it&#8217;s often convenient to locate the spool directory on a ramdisk (<tt>/dev/shm</tt>
+or one of your own creation- kvspool includes a utility to make them easily).</p></div>
 </div>
 <div class="sect2">
 <h3 id="_write_data_to_spool">Write data to spool</h3>
-<div class="paragraph"><p>We show a simple example of using the spool in Perl, Python and C here.</p></div>
+<div class="paragraph"><p>We show a simple example of using the spool in Perl, Python and C here. Any time the
+"spool write" operation is invoked, the data is immediately copied out to the spool and
+available to a reader.</p></div>
 <div class="listingblock">
 <div class="title">Perl</div>
 <div class="content"><!-- Generator: GNU source-highlight 3.1.3
@@ -1184,11 +1178,15 @@ http://www.gnu.org/software/src-highlite -->
 <span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> <span style="color: #FF0000">"day"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">);</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> <span style="color: #FF0000">"user"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Troy"</span><span style="color: #990000">);</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_spool_write</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">);</span>
+<span style="color: #990000">...</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span>set<span style="color: #990000">);</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_free</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">);</span></tt></pre></div></div>
 </div>
 <div class="sect2">
 <h3 id="_read_data_from_spool">Read data from spool</h3>
+<div class="paragraph"><p>The reader blocks if no data is available (except in C where a non-blocking read is
+available). If data is available immediately, or when it becomes available, a hash or
+dictionary or C equivalent is returned.</p></div>
 <div class="listingblock">
 <div class="title">Perl</div>
 <div class="content"><!-- Generator: GNU source-highlight 3.1.3
@@ -1221,67 +1219,6 @@ http://www.gnu.org/software/src-highlite -->
 <span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span>set<span style="color: #990000">);</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_free</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">);</span></tt></pre></div></div>
 </div>
-<div class="sect2">
-<h3 id="_streaming">Streaming</h3>
-<div class="paragraph"><p>"Streaming data" between two programs just amounts to creating a spool directory
-for writer and reader to share.</p></div>
-<div class="sect3">
-<h4 id="_quick_test">Quick test</h4>
-<div class="paragraph"><p>If you want to quickly try kvspool out with some meaningless data, there&#8217;s a pair
-of included utilities you can use. <tt>kvsp-spw</tt> writes some test data. You can use
-<tt>kvsp-spr</tt> to read it (or to manually look at any spool):</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>% mkdir junk
-% kvsp-spr junk</tt></pre>
-</div></div>
-<div class="paragraph"><p>Run <tt>kvsp-spw junk</tt> a few times in another window and watch as the reader prints it.
-These test utilities use the C API.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_blocking">Blocking</h4>
-<div class="paragraph"><p>In kvspool, writers never block, and readers always block (except in the C API where a
-non-blocking read is available).</p></div>
-</div>
-<div class="sect3">
-<h4 id="_string_keys_and_values">String keys and values</h4>
-<div class="paragraph"><p>These examples use string keys and string values. Use base64-encoding if binary values
-are needed.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_1_to_1_or_0_1">1-to-1 (or 0-1)</h4>
-<div class="paragraph"><p>A spool can have only one writer and one reader at a time. They can exit and restart
-without any impact on each other. Either (writer or reader) can also be absent. If there
-is no writer, a reader just blocks (assuming the spool is drained) waiting for new data.
-If there is no reader, a writer just populates the spool for any future reader.</p></div>
-<div class="paragraph"><p>There are included utilities to tee a spool or do network fan-out, so the 1-1 limitation
-is easy to overcome when multiple independent readers each need their own copy of a spool.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_persistent_read_position">Persistent read position</h4>
-<div class="paragraph"><p>The spool records the reader position internally. If a reader exits, then restarts, it
-picks up where it left off. (The <tt>kvsp-rewind</tt> utility can be used to reset the reader
-position to the beginning, for replay purposes).</p></div>
-<div class="paragraph"><p>Because the read position is stored in the spool, you can see it using <tt>kvsp-status</tt>.</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>% kvsp-status spool
-39%</tt></pre>
-</div></div>
-</div>
-<div class="sect3">
-<h4 id="_data_loss">Data loss</h4>
-<div class="paragraph"><p>The writer treats the spool as, essentially, a circular buffer of a finite size. So, when
-it fills up, the oldest data is deleted, to make room for new. This happens regardless of
-whether the data has been read. A reader that is running continuously, and is "fast
-enough" to keep up with a writer, need not experience any data loss. But by design, the
-bounded capacity of the spool means that persistently slow or unavailable readers may lose
-the opportunity to read every frame. In other words a reader that reads one frame, exits
-and reads another frame much later may never know that intervening frames were discarded.
-Data loss is a deliberate "feature" of kvspool (instead of blocking the writer or having
-to buffer possibly-infinite amounts of data).</p></div>
-</div>
-</div>
 </div>
 </div>
 <div class="sect1">
@@ -1289,7 +1226,8 @@ to buffer possibly-infinite amounts of data).</p></div>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_c_c">C/C++</h3>
-<div class="paragraph"><p>Programs written against the kvspool API can be linked with -lkvspool.</p></div>
+<div class="paragraph"><p>Programs written against the kvspool API can be linked with -lkvspool. Since both reading
+and writing to the spool in C requires a "dictionary" data structure, one is included.</p></div>
 <div class="sect3">
 <h4 id="_reader_api">Reader API</h4>
 <div class="listingblock">
@@ -1300,6 +1238,14 @@ http://www.gnu.org/software/src-highlite -->
 <pre><tt><span style="color: #009900">void</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_new</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>dir<span style="color: #990000">);</span>
 <span style="color: #009900">int</span> <span style="font-weight: bold"><span style="color: #000000">kv_spool_read</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>sp<span style="color: #990000">,</span> <span style="color: #009900">void</span> <span style="color: #990000">*</span>set<span style="color: #990000">,</span> <span style="color: #009900">int</span> blocking<span style="color: #990000">);</span>
 <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_free</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*);</span></tt></pre></div></div>
+<div class="paragraph"><p>This is also a programmatic equal of the <tt>kvsp-rewind</tt> command which can be used if the
+reader does not have the spool open:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">sp_reset</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>dir<span style="color: #990000">);</span></tt></pre></div></div>
 </div>
 <div class="sect3">
 <h4 id="_writer_api">Writer API</h4>
@@ -1314,7 +1260,6 @@ http://www.gnu.org/software/src-highlite -->
 </div>
 <div class="sect3">
 <h4 id="_dictionary_api">Dictionary API</h4>
-<div class="paragraph"><p>The <tt>void *set</tt> in the C API is a dictionary data structure in C.</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.3
 by Lorenzo Bettini
@@ -1329,16 +1274,18 @@ http://www.gnu.org/software/src-highlite -->
 <span style="color: #008080">kv_t</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_get</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">,</span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>key<span style="color: #990000">);</span>
 <span style="color: #009900">int</span> <span style="font-weight: bold"><span style="color: #000000">kv_len</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">);</span>
 <span style="color: #008080">kv_t</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_next</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">,</span><span style="color: #008080">kv_t</span> <span style="color: #990000">*</span>kv<span style="color: #990000">);</span></tt></pre></div></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>typedef struct {
-  char *key;
-  int klen;
-  char *val;
-  int vlen;
-  /* other internal fields not shown */
-} kv_t;</tt></pre>
-</div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">typedef</span></span> <span style="font-weight: bold"><span style="color: #0000FF">struct</span></span> <span style="color: #FF0000">{</span>
+  <span style="color: #009900">char</span> <span style="color: #990000">*</span>key<span style="color: #990000">;</span>
+  <span style="color: #009900">int</span> klen<span style="color: #990000">;</span>
+  <span style="color: #009900">char</span> <span style="color: #990000">*</span>val<span style="color: #990000">;</span>
+  <span style="color: #009900">int</span> vlen<span style="color: #990000">;</span>
+  <span style="font-style: italic"><span style="color: #9A1900">/* other internal fields not shown */</span></span>
+<span style="color: #FF0000">}</span> kv_t<span style="color: #990000">;</span></tt></pre></div></div>
 <div class="paragraph"><p>A C program can iterate through all the keys/values like:</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.3
@@ -1353,18 +1300,8 @@ http://www.gnu.org/software/src-highlite -->
 </div>
 </div>
 <div class="sect2">
-<h3 id="_reset_api">Reset API</h3>
-<div class="paragraph"><p>This is the programmatic equal of the <tt>kvsp-rewind</tt> command:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">sp_reset</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>dir<span style="color: #990000">);</span></tt></pre></div></div>
-</div>
-<div class="sect2">
 <h3 id="_perl">Perl</h3>
-<div class="paragraph"><p>In Perl this is how to use the module and open a spool for reading or writing:</p></div>
+<div class="paragraph"><p>In Perl, to use the module and open a spool for reading or writing:</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.3
 by Lorenzo Bettini
@@ -1405,8 +1342,6 @@ d <span style="color: #990000">=</span> kvpy<span style="color: #990000">.</span
 <div class="sect1">
 <h2 id="_utilities">Utilities</h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="_basic">Basic</h3>
 <div class="tableblock">
 <table rules="none"
 width="90%"
@@ -1453,18 +1388,6 @@ spool directory for each reader (and use <tt>kvsp-size</tt> to set the capacity 
 then use <tt>kvsp-tee</tt> as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
 maintain the tee.</p></div>
-</div>
-<div class="sect2">
-<h3 id="_network">Network</h3>
-<div class="paragraph"><p>The network utilities keep a local spool continuously replicated to a remote spool.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">The following utilities require ZeroMQ and Jansson libraries on the system in order to be built.</td>
-</tr></table>
-</div>
 <div class="tableblock">
 <table rules="none"
 width="90%"
@@ -1491,6 +1414,8 @@ cellspacing="0" cellpadding="4">
 </tbody>
 </table>
 </div>
+<div class="paragraph"><p>The network utilities keep a local spool continuously replicated to a remote spool.
+These require ZeroMQ and Jansson libraries on the system in order to be built.</p></div>
 <div class="paragraph"><p>The <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> utilities publish a source spool to a remote spool.
 The publisher listens on the specified TCP port, and the subscribers connect to it.
 More than one subscriber may run simultaneously. (The <tt>kvsp-pub</tt> commands acts as the
@@ -1501,19 +1426,6 @@ reader to the local stream, while <tt>kvsp-sub</tt> acts as the writer on remote
 in regular mode a publisher to which no subscriber is connected will drop frames but in
 the special mode, the publisher retains data until a subscriber connects. (The data
 retention capacity is still limited by the <tt>kvsp-size</tt>.)</p></div>
-<div class="sect3">
-<h4 id="_interoperability_via_json">Interoperability via JSON</h4>
-<div class="paragraph"><p>The <tt>kvsp-pub</tt> utility "exports" a spool into JSON-formatted ZeroMQ messages. Any
-programming language (for example C#, etc) that supports ZeroMQ can connect a SUB or PULL
-socket (in Zero MQ nomenclature) to the specified endpoint and receive JSON for each spool
-frame.  This is useful for interoperating with programs that fall outside of the spool
-ecosystem.  Similarly, <tt>kvsp-sub</tt> produces a spool from JSON-formatted ZeroMQ messages;
-therefore any programming language that can send JSON over a ZeroMQ PUB or PUSH socket can
-publish to a spool.</p></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_other">Other</h3>
 <div class="tableblock">
 <table rules="none"
 width="90%"
@@ -1576,7 +1488,6 @@ and show its size.  The <tt>ramdisk</tt> utility is included with kvspool becaus
 convenient to locate a spool on a ramdisk for performance.</p></div>
 </div>
 </div>
-</div>
 <div class="sect1">
 <h2 id="_good_practices">Good practices</h2>
 <div class="sectionbody">
@@ -1595,10 +1506,6 @@ needed to develop new versions of the software that reads it.</p></div>
 <div class="content">
 <pre><tt>kvsp-rewind snapshot</tt></pre>
 </div></div>
-<div class="paragraph"><p>Since the snapshot is "canned" real data, but not being written to any longer, it is
-useful as a consistent data set to test new versions of software. The other major benefit
-of canned data is that it&#8217;s easy to take on a laptop, or to a dev environment where the
-writer is not even present, and still do development on the reader programs.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_use_a_ramdisk">Use a ramdisk</h3>
@@ -1613,106 +1520,18 @@ mkdir /var/ramdisk/spool</tt></pre>
 </div>
 <div class="sect2">
 <h3 id="_use_a_daemon_manager">Use a daemon manager</h3>
-<div class="paragraph"><p>For background processes that need to be left running continuously, such as <tt>kvsp-tee</tt>,
-<tt>kvsp-sub</tt>, <tt>kvsp-pub</tt>, configure these to run at startup. The author has a open-source
-process monitor called <tt>pmtr</tt> in which jobs like this can be configured like this:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>job {
-  name publisher
-  dir /data/spool
-  cmd /usr/local/bin/kvsp-pub -d spool tcp://192.168.1.9:1110
-  out pub.out
-  err pub.err
-}</tt></pre>
-</div></div>
-<div class="paragraph"><p>The <a href="http://troydhanson.github.com/pmtr/">pmtr process manager site</a> has more information.</p></div>
+<div class="paragraph"><p>Processes that need to start at boot and run continuously in the background, such
+<tt>kvsp-sub</tt> and <tt>kvsp-pub</tt>, should be run under service supervision such as the author&#8217;s
+<a href="http://troydhanson.github.com/pmtr/">pmtr process monitor</a>, a sysvinit script or similar.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_interoperability">Interoperability</h3>
-<div class="paragraph"><p>For platforms without kvspool support (such as Windows) the <tt>kvsp-pub</tt> utility can
-publish spool frames in JSON, as messages over a ZeroMQ "pub/sub" or "push/pull" socket.
-This is also useful for any programs that operate outside of the spool environment.
-An example of receiving JSON over ZeroMQ (in Perl) is shown below- this program can be
-used to receive the output of <tt>kvsp-pub -s</tt>.</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>#!/usr/bin/perl
-use Data::Dumper;
-use JSON;
-use ZeroMQ qw/:all/;</tt></pre>
-</div></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>my $ctx = ZeroMQ::Context-&gt;new;
-my $sock = $ctx-&gt;socket(ZMQ_PULL);
-$sock-&gt;connect("tcp://127.0.0.1:1234");</tt></pre>
-</div></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>for(;;) {
-  my $d = $sock-&gt;recv()-&gt;data();
-  print Dumper from_json($d), "\n";
-}</tt></pre>
-</div></div>
+<h3 id="_non_spool_remotes">Non-spool remotes</h3>
+<div class="paragraph"><p>Platforms without kvspool such as Windows can still send or receive frames to a kvspool.
+The "spool side" uses <tt>kvsp-pub</tt> or <tt>kvsp-sub</tt> to publish or subscribe to the spool, while
+the "non-spool side" uses a ZeroMQ "pub/sub" or "push/pull" socket to send JSON-formatted
+objects containing the key-value set.  An example of receiving JSON over ZeroMQ in Perl is
+included in <tt>tests/json-client.pl</tt>.</p></div>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_roadmap">Roadmap</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Kvspool is a young library and has some rough edges.</p></div>
-<div class="paragraph"><p>Rough edges:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-The Python API needs an OO wrapper (it only has a procedural one right now).
-</p>
-</li>
-<li>
-<p>
-The Java API needs documentation and unit tests.
-</p>
-</li>
-<li>
-<p>
-The C API has some deprecated functions for binary support
-</p>
-</li>
-<li>
-<p>
-It&#8217;s only been used with Ubuntu 10.x. Build needs to be tested elsewhere.
-</p>
-</li>
-<li>
-<p>
-Test or improve Autoconf detection for Perl, Python, Java, ZeroMQ and Jansson
-</p>
-</li>
-<li>
-<p>
-Expand/rewrite test suite
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>More sweeping ideas for a possible future "v2" rewrite:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Support multi-writer, multi-reader (see future.txt)
-</p>
-</li>
-<li>
-<p>
-Replace segemented data files with one memory mapped, circular file
-</p>
-</li>
-<li>
-<p>
-Use JSON internally
-</p>
-</li>
-</ul></div>
 </div>
 </div>
 </div>
@@ -1720,7 +1539,7 @@ Use JSON internally
 <div id="footer">
 <div id="footer-text">
 Version 0.5<br />
-Last updated 2012-02-26 17:16:50 EST
+Last updated 2012-02-27 21:40:45 EST
 </div>
 </div>
 </body>
