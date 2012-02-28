@@ -1,0 +1,9 @@
+asciidoc -a theme=flask kvspool.txt
+cp kvspool.html /tmp
+cd ..
+git checkout gh-pages
+cp /tmp/kvspool.html index.html
+git add index.html
+git commit -m "page update"
+git push
+
