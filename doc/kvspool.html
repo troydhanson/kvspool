@@ -826,7 +826,7 @@ When we make a spool directory, we tell kvspool what its maximum size should be:
 <div class="literalblock">
 <div class="content">
 <pre><tt>% mkdir spool
-% kvsp-size -s 1G spool</tt></pre>
+% kvsp-init -s 1G spool</tt></pre>
 </div></div>
 <div class="paragraph"><p>This tells kvspool to keep a maximum of 1 GB of data.  The spool directory enters "steady
 state" at that point, staying around 1 GB in size- even if the reader consumes it all.
@@ -1148,8 +1148,8 @@ cellspacing="0" cellpadding="4">
 </thead>
 <tbody>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-size</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-size -s 1G spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-init</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-init -s 1G spool</tt></p></td>
 </tr>
 <tr>
 <td align="left" valign="top"><p class="table"><tt>kvsp-status</tt></p></td>
@@ -1166,15 +1166,15 @@ cellspacing="0" cellpadding="4">
 </tbody>
 </table>
 </div>
-<div class="paragraph"><p>The <tt>kvsp-size</tt> command is used when a spool directory is first created, to set
-the maximum capacity of the spool. It accepts k/m/b/t suffixes. If <tt>kvsp-size</tt> is
+<div class="paragraph"><p>The <tt>kvsp-init</tt> command is used when a spool directory is first created, to set
+the maximum capacity of the spool. It accepts k/m/b/t suffixes. If <tt>kvsp-init</tt> is
 run later, after the spool already exists and has data, it is resized.</p></div>
 <div class="paragraph"><p>Run <tt>kvsp-status</tt> to see what percentage of the spool has been consumed by a reader.</p></div>
 <div class="paragraph"><p>The <tt>kvsp-rewind</tt> command resets the reader position to the beginning (oldest frame) in the
 spool. Use this command in order to "replay" the spooled data. Disconnect (terminate) any
 readers before running this command.</p></div>
 <div class="paragraph"><p>Use <tt>kvsp-tee</tt> to support multiple readers from one input spool. First make a separate
-spool directory for each reader (and use <tt>kvsp-size</tt> to set the capacity of each one);
+spool directory for each reader (and use <tt>kvsp-init</tt> to set the capacity of each one);
 then use <tt>kvsp-tee</tt> as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
 maintain the tee.</p></div>
@@ -1215,7 +1215,7 @@ reader to the local stream, while <tt>kvsp-sub</tt> acts as the writer on remote
 <tt>kvsp-sub</tt> instances each receive a "1/n" share of the data rather than full take.  Also,
 in regular mode a publisher to which no subscriber is connected will drop frames but in
 the special mode, the publisher retains data until a subscriber connects. (The data
-retention capacity is still limited by the <tt>kvsp-size</tt>.)</p></div>
+retention capacity is still limited to the size set by <tt>kvsp-init</tt>.)</p></div>
 <div class="tableblock">
 <table rules="none"
 width="90%"
@@ -1336,7 +1336,7 @@ Use JSON internally
 <div id="footer">
 <div id="footer-text">
 Version 0.5<br />
-Last updated 2012-02-28 22:36:09 EST
+Last updated 2012-02-29 07:46:36 EST
 </div>
 </div>
 </body>

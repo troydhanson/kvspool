@@ -1,13 +1,13 @@
 AM_CFLAGS = -I.. -I../include
 LIBSPOOL = -L../src -lkvspool
-bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-size kvsp-status \
+bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-init kvsp-status \
                kvsp-speed kvsp-mod kvsp-rewind \
                ramdisk
 
 kvsp_spr_LDADD = $(LIBSPOOL)
 kvsp_spw_LDADD = $(LIBSPOOL)
 kvsp_tee_LDADD = $(LIBSPOOL)
-kvsp_size_LDADD = $(LIBSPOOL)
+kvsp_init_LDADD = $(LIBSPOOL)
 kvsp_status_LDADD = $(LIBSPOOL)
 kvsp_speed_LDADD = $(LIBSPOOL)
 kvsp_mod_LDADD = $(LIBSPOOL)
@@ -27,7 +27,7 @@ endif
 kvsp_spr_DEPENDENCIES = ../src/libkvspool.a
 kvsp_spw_DEPENDENCIES = ../src/libkvspool.a
 kvsp_tee_DEPENDENCIES = ../src/libkvspool.a
-kvsp_size_DEPENDENCIES = ../src/libkvspool.a
+kvsp_init_DEPENDENCIES = ../src/libkvspool.a
 kvsp_status_DEPENDENCIES = ../src/libkvspool.a
 kvsp_speed_DEPENDENCIES = ../src/libkvspool.a
 kvsp_mod_DEPENDENCIES = ../src/libkvspool.a

@@ -51,7 +51,7 @@ the spool backs the data to disk, space management is necessary: 'don't fill up 
 When we make a spool directory, we tell kvspool what its maximum size should be:
 
   % mkdir spool
-  % kvsp-size -s 1G spool
+  % kvsp-init -s 1G spool
 
 This tells kvspool to keep a maximum of 1 GB of data.  The spool directory enters "steady
 state" at that point, staying around 1 GB in size- even if the reader consumes it all.
@@ -297,14 +297,14 @@ Utilities
 [width="90%",cols="10m,50m",grid="none",options="header"]
 |===============================================================================
 |command     | example 
-|kvsp-size   | kvsp-size -s 1G spool
+|kvsp-init   | kvsp-init -s 1G spool
 |kvsp-status | kvsp-status spool
 |kvsp-rewind | kvsp-rewind spool
 |kvsp-tee    | kvsp-tee -s spool-in spool-copy1 spool-copy2
 |===============================================================================
 
-The `kvsp-size` command is used when a spool directory is first created, to set 
-the maximum capacity of the spool. It accepts k/m/b/t suffixes. If `kvsp-size` is
+The `kvsp-init` command is used when a spool directory is first created, to set 
+the maximum capacity of the spool. It accepts k/m/b/t suffixes. If `kvsp-init` is
 run later, after the spool already exists and has data, it is resized.
 
 Run `kvsp-status` to see what percentage of the spool has been consumed by a reader.
@@ -314,7 +314,7 @@ spool. Use this command in order to "replay" the spooled data. Disconnect (termi
 readers before running this command.
 
 Use `kvsp-tee` to support multiple readers from one input spool. First make a separate
-spool directory for each reader (and use `kvsp-size` to set the capacity of each one);
+spool directory for each reader (and use `kvsp-init` to set the capacity of each one);
 then use `kvsp-tee` as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
 maintain the tee.
@@ -340,7 +340,7 @@ Giving the `-s` flag to both `kvsp-pub` and `kvsp-sub` changes the operation fro
 `kvsp-sub` instances each receive a "1/n" share of the data rather than full take.  Also,
 in regular mode a publisher to which no subscriber is connected will drop frames but in
 the special mode, the publisher retains data until a subscriber connects. (The data
-retention capacity is still limited by the `kvsp-size`.)
+retention capacity is still limited to the size set by `kvsp-init`.)
 
 .Other utilities
 [width="90%",cols="10m,50m",grid="none",options="header"]
