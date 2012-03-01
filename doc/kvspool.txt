@@ -9,8 +9,8 @@ kv-spool ("key-value" spool)::
          The spool data is backed to disk, supports snapshot, rewind and replay,
          network replication, and has configurable, steady-state disk consumption.
 
-kvspool's niche
----------------
+kvspool
+-------
 Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message-passing
 library. Its "unit of data" is the *dictionary*. (Or so Python calls it). Perl calls it a
 hash. It's a set of key-value pairs.
@@ -29,18 +29,20 @@ dictionaries into the spool. Like this,
 | $v->write($h);                           |  kv_spool_read(sp,set,1);
 |===============================================================================
 
-The reader and writer transfer data through the spool on the disk. Since the data persists
-when the writer exits, the reader does not necessarily need to run at the same time. It
-can run later and read the data; conversely if you run the reader first, it blocks waiting
-for data to arrive in the spool.
+The reader and writer transfer data through the spool on the disk. Once the writer has
+opened the spool, it needs only call the "write" operation as often as it wants to put
+another dictionary into the spool. Likewise, once the reader opens the spool, every time
+it calls the "read" operation, it gets the next dictionary. If the reader is "caught up"
+it blocks waiting for data to arrive in the spool. 
 
-[TIP]
-.Use a ramdisk
-Locate your spool on a ramdisk for fast I/O between writer and reader. Kvspool includes a
-handy utility to make a ramdisk on a mount point, e.g. `ramdisk -c -s 2G /mnt/ramdisk`,
-where you can then make your spool directory.
+Loose coupling
+~~~~~~~~~~~~~~
+The writer and reader don't have to run at the same time. They can come and go.  This is a
+practical necessity with long running processes. By using the disk as an intermediate,
+kvspool insulates them from each other. If the writer goes down for a while (because it's
+done, or was taken down, for example), the reader is unaffected and vice versa. 
 
-Space management
+Bounded disk use
 ~~~~~~~~~~~~~~~~
 In a streaming data environment, the writer and reader can run for months on end.  Because
 the spool backs the data to disk, space management is necessary: 'don't fill up the disk'.
@@ -54,21 +56,14 @@ directory enters a "steady state", staying around 1 GB in size- even after a rea
 consumes it all.  (The data is kept around to reserve that disk space, and to support
 rewind.) To make room for new data, the oldest data is deleted as needed.
 
-Loose coupling
-~~~~~~~~~~~~~~
-The spool accomodates readers and writers that come and go. This is a practical necessity
-with long running processes. By using the disk as an intermediate, kvspool "insulates"
-them from each other. If the writer goes down for a while (because it's done, or it
-crashed, or in maintenance), the reader is unaffected and vice versa. 
-
-Persistent reader position
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Read position
+~~~~~~~~~~~~~
 If the reader exits, and restarts, it picks up where it left off.  But if the reader is
 absent for a long time, it may miss some data, because the writer relentlessly ages off
 old data to keep the spool under its maximum size.
 
-Rewind and replay
-~~~~~~~~~~~~~~~~~
+Rewind
+~~~~~~
 The spool is a like a long reel-to-reel tape spliced together at the ends. Data remains in
 the spool after it's been read, until the spool needs to reclaim the space. Kvspool takes
 advantage of this by supporting "rewind":
@@ -88,23 +83,19 @@ It's recommended to stop the writer before copying the spool.
 
 Multiple readers
 ~~~~~~~~~~~~~~~~
-A spool supports one writer and one reader. But what if we want multiple readers? 
+A spool supports one writer and one reader. But what if we want multiple readers?  The
+solution is to replicate the spool, so that each reader gets its own spool. 
 
-The solution is to replicate the spool, so that each reader gets its own spool. To enact
-replication, kvspool includes a utility:
+Local replication
+~~~~~~~~~~~~~~~~~
+To enact local replication, kvspool includes a utility:
 
   % kvsp-tee -s spool copy1 copy2
 
-It acts as a reader to the input spool, and a writer to the output spools. This command
-must be left running to maintain the replication.  The spools are "live" replicates- data
-arriving in the source spool is immediately pushed to the replicates. The replicates are
-normal spools, created in the usual way with `mkdir` and `kvsp-init`.
-
-[TIP]
-.Use a daemon supervisor
-Run background processes such as `kvsp-tee`, `kvsp-pub`, and `kvsp-sub`, under a daemon
-supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr process monitor]
-to start them at system boot and ensure that they always stay running.
+It acts as a reader to the original spool, and a writer to the replicate spools. This
+utility must be left running to maintain the replication. Data arriving in the source
+spool is immediately pushed to the replicates. (The replicates are normal spools so create
+them with `mkdir` and `kvsp-init` before running the utility).
 
 Network replication
 ~~~~~~~~~~~~~~~~~~~
@@ -112,25 +103,38 @@ You can also publish a spool over the network, like this:
 
   % kvsp-pub -d spool tcp://192.168.1.9:1110
 
-On the remote computers where you wish to subscribe to the spool, run:
+The IP address must belong to the publisher, and you can use any port number.  On the
+remote computers where you wish to subscribe to the spool, run:
 
   % kvsp-sub -d spool tcp://192.168.1.9:1110
 
-Obviously, the IP address must be valid on the publisher side. The port is up to you. This
-type of publish-subscribe does a "fan-out"- each subscriber gets a copy of the data. 
+(You can start them in either order, and they'll automatically recover if the other side
+restarts, thanks to the ZeroMQ library underlying this utility).  This type of replication
+is a "fan-out" to each subscriber- they each get a copy of the data. 
 
-Modes
-^^^^^
+.PUB-SUB vs PUSH-PULL
+********************************************************************************
 By default, the ZeroMQ "PUB-SUB" pattern is used by this pair of utilities. One of its
 drawbacks is that PUB-SUB can be "lossy"- the publisher sends data to whatever subscribers
 happen to be connected at the time. If subscribers are just starting up, they might lose
-some data while they wait for their connection to the publisher to get established. 
+some initial data while they wait for their connection to the publisher to get established. 
 
 Both `kvsp-pub` and `kvsp-sub` support an `-s` option, which changes the mode of operation
 (in ZeroMQ terminology, from PUB-SUB to PUSH-PULL). In this mode, the publisher only sends
 data when a subscriber is connected. It is the preferred mode when doing one-to-one network
 replication. If more than one subscriber connects in this mode- they each get "1/n" share
 of the data. In other words it load-balances among the subscribers rather than full copy.
+********************************************************************************
+
+A recommendation: run background processes such as `kvsp-tee`, `kvsp-pub`, and `kvsp-sub`,
+under a daemon supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr
+process monitor] to start them at system boot and ensure that they always stay running.
+
+Interop
+~~~~~~~
+While kvspool is only for Linux, it can interoperate (send or receive spool data) with any
+platform that supports ZeroMQ and JSON. The `kvsp-pub` and `kvsp-sub` simply send messages
+containing dictionaries formatted as JSON objects.
 
 License
 ~~~~~~~
@@ -141,9 +145,11 @@ Resources & Help
 News about software updates are posted to the author's blog: http://tkhanson.net/blog.
 Contact the author directly at tdh@tkhanson.net if you have questions or other issues.
 
-Getting kvspool
----------------
-You can clone kvspool from github:
+Build/install
+-------------
+
+Download
+~~~~~~~~
 
   % git clone git://github.com/troydhanson/kvspool.git
 
