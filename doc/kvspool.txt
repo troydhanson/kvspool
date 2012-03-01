@@ -36,8 +36,9 @@ for data to arrive in the spool.
 
 [TIP]
 .Use a ramdisk
-For fast, shared-memory I/O between writer and reader, locate your spool on a ramdisk. 
-Kvspool includes a utility to make a tmpfs ramdisk like `ramdisk -c -s 2G /mnt/ramdisk`.
+Locate your spool on a ramdisk for fast I/O between writer and reader. Kvspool includes a
+handy utility to make a ramdisk on a mount point, e.g. `ramdisk -c -s 2G /mnt/ramdisk`,
+where you can then make your spool directory.
 
 Space management
 ~~~~~~~~~~~~~~~~
@@ -89,16 +90,15 @@ Multiple readers
 ~~~~~~~~~~~~~~~~
 A spool supports one writer and one reader. But what if we want multiple readers? 
 
-The solution is to replicate the spool- so that each reader has its own copy. The spools
-are "live replicates" meaning that updates to the source spool are immediately pushed to
-the replicates. The replicates are themselves normal spools, created in the usual way with
-`mkdir` and `kvsp-init`. To enact replication, kvspool includes a utility:
-to the source spool and the writer to the replicate spools).
+The solution is to replicate the spool, so that each reader gets its own spool. To enact
+replication, kvspool includes a utility:
 
   % kvsp-tee -s spool copy1 copy2
 
 It acts as a reader to the input spool, and a writer to the output spools. This command
-must be left running to maintain the replication.
+must be left running to maintain the replication.  The spools are "live" replicates- data
+arriving in the source spool is immediately pushed to the replicates. The replicates are
+normal spools, created in the usual way with `mkdir` and `kvsp-init`.
 
 [TIP]
 .Use a daemon supervisor
