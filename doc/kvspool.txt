@@ -34,15 +34,10 @@ when the writer exits, the reader does not necessarily need to run at the same t
 can run later and read the data; conversely if you run the reader first, it blocks waiting
 for data to arrive in the spool.
 
-.ramdisk: shared memory I/O
-*****************************************************************************
-A ramdisk is a good place to store a spool if there's a lot of data going in and out- if
-the data is dispensable. For convenience kvspool includes a `ramdisk` utility to make a
-tmpfs ramdisk, where you can make a spool directory.
-
-  ramdisk -c -s 2G /mnt/ramdisk
-  mkdir /mnt/ramdisk/spool
-*****************************************************************************
+[TIP]
+.Use a ramdisk
+For fast, shared-memory I/O between writer and reader, locate your spool on a ramdisk. 
+Kvspool includes a utility to make a tmpfs ramdisk like `ramdisk -c -s 2G /mnt/ramdisk`.
 
 Space management
 ~~~~~~~~~~~~~~~~
@@ -53,10 +48,10 @@ When we make a spool directory, we tell kvspool what its maximum size should be:
   % mkdir spool
   % kvsp-init -s 1G spool
 
-This tells kvspool to keep a maximum of 1 GB of data.  The spool directory enters "steady
-state" at that point, staying around 1 GB in size- even if the reader consumes it all.
-(The data is kept around to reserve that disk space, and to support rewind.) To make room
-for new data, the oldest data is deleted as needed.
+This tells kvspool to keep a maximum of 1 GB of data.  When it fills up, the spool
+directory enters a "steady state", staying around 1 GB in size- even after a reader
+consumes it all.  (The data is kept around to reserve that disk space, and to support
+rewind.) To make room for new data, the oldest data is deleted as needed.
 
 Loose coupling
 ~~~~~~~~~~~~~~
@@ -79,38 +74,64 @@ advantage of this by supporting "rewind":
 
   % kvsp-rewind spool
 
-If you run this (while the reader is not running- then start it up), reading starts at
-the beginning of the spool. This is also useful in conjunction with taking a "snapshot":
+You'll need to stop the reader before issuing a rewind.
+
+Snapshot
+~~~~~~~~
+A snapshot is nothing more than a copy of the spool. You can bring the snapshot back to a
+development environment, rewind it, and use it as a consistent source of test data.
 
   % cp -r spool snapshot
 
-A snapshot is nothing more than a copy of the spool. Now you can bring it back to a
-development environment, rewind it, and use it as a consistent source of test data.
+It's recommended to stop the writer before copying the spool.
 
-Fan-out & Network Replication
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-A spool is designed for one writer and one reader. If you need multiple readers you can
-tee out to multiple spools:
+Multiple readers
+~~~~~~~~~~~~~~~~
+A spool supports one writer and one reader. But what if we want multiple readers? 
+
+The solution is to replicate the spool- so that each reader has its own copy. The spools
+are "live replicates" meaning that updates to the source spool are immediately pushed to
+the replicates. The replicates are themselves normal spools, created in the usual way with
+`mkdir` and `kvsp-init`. To enact replication, kvspool includes a utility:
+to the source spool and the writer to the replicate spools).
 
   % kvsp-tee -s spool copy1 copy2
 
+It acts as a reader to the input spool, and a writer to the output spools. This command
+must be left running to maintain the replication.
+
+[TIP]
+.Use a daemon supervisor
+Run background processes such as `kvsp-tee`, `kvsp-pub`, and `kvsp-sub`, under a daemon
+supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr process monitor].
+It starts them at system boot, ensures that they always stay running, and keeps the jobs
+defined in one configuration file.
+
+Network replication
+~~~~~~~~~~~~~~~~~~~
 You can also publish a spool over the network, like this:
 
   % kvsp-pub -d spool tcp://192.168.1.9:1110
 
-Now, on the remote computers where you wish to subscribe to the spool, run:
+On the remote computers where you wish to subscribe to the spool, run:
 
   % kvsp-sub -d spool tcp://192.168.1.9:1110
 
 Obviously, the IP address must be valid on the publisher side. The port is up to you. This
-type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
-you use the `-s` switch, on both pub and sub, it changes so each subscriber gets only a
-"1/n" share of the data. The latter mode is preferred for 1-1 network replication.
+type of publish-subscribe does a "fan-out"- each subscriber gets a copy of the data. 
 
-[TIP]
-Use a daemon supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr
-process monitor] or a sysvinit script to start up these commands at boot up and keep them
-running in the background.
+Modes
+^^^^^
+By default, the ZeroMQ "PUB-SUB" pattern is used by this pair of utilities. One of its
+drawbacks is that PUB-SUB can be "lossy"- the publisher sends data to whatever subscribers
+happen to be connected at the time. If subscribers are just starting up, they might lose
+some data while they wait for their connection to the publisher to get established. 
+
+Both `kvsp-pub` and `kvsp-sub` support an `-s` option, which changes the mode of operation
+(in ZeroMQ terminology, from PUB-SUB to PUSH-PULL). In this mode, the publisher only sends
+data when a subscriber is connected. It is the preferred mode when doing one-to-one network
+replication. If more than one subscriber connects in this mode- they each get "1/n" share
+of the data. In other words it load-balances among the subscribers rather than full copy.
 
 License
 ~~~~~~~
