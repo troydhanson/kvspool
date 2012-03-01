@@ -103,9 +103,8 @@ must be left running to maintain the replication.
 [TIP]
 .Use a daemon supervisor
 Run background processes such as `kvsp-tee`, `kvsp-pub`, and `kvsp-sub`, under a daemon
-supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr process monitor].
-It starts them at system boot, ensures that they always stay running, and keeps the jobs
-defined in one configuration file.
+supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr process monitor]
+to start them at system boot and ensure that they always stay running.
 
 Network replication
 ~~~~~~~~~~~~~~~~~~~
