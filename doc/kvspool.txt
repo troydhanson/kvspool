@@ -1,7 +1,7 @@
 kvspool: a tool for data streams
 ================================
 Troy D. Hanson <tdh@tkhanson.net>
-v0.5, February 2012
+v0.5, March 2012
 
 kv-spool ("key-value" spool):: 
          a Linux-based C library, with Perl, Python and Java bindings, to stream data
@@ -9,8 +9,8 @@ kv-spool ("key-value" spool)::
          The spool data is backed to disk, supports snapshot, rewind and replay,
          network replication, and has configurable, steady-state disk consumption.
 
-kvspool
--------
+kvspool's niche
+---------------
 Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message-passing
 library. Its "unit of data" is the *dictionary*. (Or so Python calls it). Perl calls it a
 hash. It's a set of key-value pairs.
@@ -29,20 +29,23 @@ dictionaries into the spool. Like this,
 | $v->write($h);                           |  kv_spool_read(sp,set,1);
 |===============================================================================
 
-The reader and writer transfer data through the spool on the disk. Once the writer has
-opened the spool, it needs only call the "write" operation as often as it wants to put
-another dictionary into the spool. Likewise, once the reader opens the spool, every time
-it calls the "read" operation, it gets the next dictionary. If the reader is "caught up"
-it blocks waiting for data to arrive in the spool. 
+The reader and writer transfer data through the spool on the disk. Because the spooled
+data goes into the disk, the reader and writer are decoupled. They don't have to run
+at the same time. Or they can come and go. The writer puts another dictionary into the
+spool every time it invokes the "write" operation, and the reader gets them sequentially
+when it invokes the "read" operation. If the reader exits and restarts, it picks up where
+it left off.
 
-Loose coupling
-~~~~~~~~~~~~~~
-The writer and reader don't have to run at the same time. They can come and go.  This is a
-practical necessity with long running processes. By using the disk as an intermediate,
-kvspool insulates them from each other. If the writer goes down for a while (because it's
-done, or was taken down, for example), the reader is unaffected and vice versa. 
+.ramdisk: shared memory I/O
+*****************************************************************************
+A ramdisk is a good place to put a busy spool if you don't need disk backing.
+For convenience kvspool includes a `ramdisk` utility to make a tmpfs ramdisk: 
 
-Bounded disk use
+  ramdisk -c -s 2G /mnt/ramdisk
+
+*****************************************************************************
+
+Space management
 ~~~~~~~~~~~~~~~~
 In a streaming data environment, the writer and reader can run for months on end.  Because
 the spool backs the data to disk, space management is necessary: 'don't fill up the disk'.
@@ -51,90 +54,57 @@ When we make a spool directory, we tell kvspool what its maximum size should be:
   % mkdir spool
   % kvsp-init -s 1G spool
 
-This tells kvspool to keep a maximum of 1 GB of data.  When it fills up, the spool
-directory enters a "steady state", staying around 1 GB in size- even after a reader
-consumes it all.  (The data is kept around to reserve that disk space, and to support
-rewind.) To make room for new data, the oldest data is deleted as needed.
+This tells kvspool to keep a maximum of 1 GB of data.  The spool directory enters "steady
+state" at that point, staying around 1 GB in size- even if the reader then consumes it all.
+(The data is kept around to reserve that disk space, and to support rewind.) 
 
-Read position
-~~~~~~~~~~~~~
-If the reader exits, and restarts, it picks up where it left off.  But if the reader is
-absent for a long time, it may miss some data, because the writer relentlessly ages off
-old data to keep the spool under its maximum size.
+Attrition
+~~~~~~~~~
+When the spool is full, and new data arrives, the writer deletes the oldest data to make
+room for new. (The attrition is done in units that are about 10% of the total spool size).
+A reader that runs all the time, or reads often enough to keep up with the writer, never
+needs to miss any data. But, if the reader is offline long enough it 
 
-Rewind
-~~~~~~
+Rewind and replay
+~~~~~~~~~~~~~~~~~
 The spool is a like a long reel-to-reel tape spliced together at the ends. Data remains in
 the spool after it's been read, until the spool needs to reclaim the space. Kvspool takes
 advantage of this by supporting "rewind":
 
   % kvsp-rewind spool
 
-You'll need to stop the reader before issuing a rewind.
-
-Snapshot
-~~~~~~~~
-A snapshot is nothing more than a copy of the spool. You can bring the snapshot back to a
-development environment, rewind it, and use it as a consistent source of test data.
+If you run this (while the reader is not running- then start it up), reading starts at
+the beginning of the spool. This is also useful in conjunction with taking a "snapshot":
 
   % cp -r spool snapshot
 
-It's recommended to stop the writer before copying the spool.
+A snapshot is nothing more than a copy of the spool. Now you can bring it back to a
+development environment, rewind it, and use it as a consistent source of test data.
 
-Multiple readers
-~~~~~~~~~~~~~~~~
-A spool supports one writer and one reader. But what if we want multiple readers?  The
-solution is to replicate the spool, so that each reader gets its own spool. 
-
-Local replication
-~~~~~~~~~~~~~~~~~
-To enact local replication, kvspool includes a utility:
+Fan-out & Network Replication
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A spool is designed for one writer and one reader. If you need multiple readers you can
+tee out to multiple spools:
 
   % kvsp-tee -s spool copy1 copy2
 
-It acts as a reader to the original spool, and a writer to the replicate spools. This
-utility must be left running to maintain the replication. Data arriving in the source
-spool is immediately pushed to the replicates. (The replicates are normal spools so create
-them with `mkdir` and `kvsp-init` before running the utility).
-
-Network replication
-~~~~~~~~~~~~~~~~~~~
 You can also publish a spool over the network, like this:
 
   % kvsp-pub -d spool tcp://192.168.1.9:1110
 
-The IP address must belong to the publisher, and you can use any port number.  On the
-remote computers where you wish to subscribe to the spool, run:
+Now, on the remote computers where you wish to subscribe to the spool, run:
 
   % kvsp-sub -d spool tcp://192.168.1.9:1110
 
-(You can start them in either order, and they'll automatically recover if the other side
-restarts, thanks to the ZeroMQ library underlying this utility).  This type of replication
-is a "fan-out" to each subscriber- they each get a copy of the data. 
+Obviously, the IP address must be valid on the publisher side. The port is up to you. This
+type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
+you use the `-s` switch, on both pub and sub, it changes so each subscriber gets only a
+"1/n" share of the data. The latter mode is preferred for 1-1 network replication.
 
-.PUB-SUB vs PUSH-PULL
-********************************************************************************
-By default, the ZeroMQ "PUB-SUB" pattern is used by this pair of utilities. One of its
-drawbacks is that PUB-SUB can be "lossy"- the publisher sends data to whatever subscribers
-happen to be connected at the time. If subscribers are just starting up, they might lose
-some initial data while they wait for their connection to the publisher to get established. 
-
-Both `kvsp-pub` and `kvsp-sub` support an `-s` option, which changes the mode of operation
-(in ZeroMQ terminology, from PUB-SUB to PUSH-PULL). In this mode, the publisher only sends
-data when a subscriber is connected. It is the preferred mode when doing one-to-one network
-replication. If more than one subscriber connects in this mode- they each get "1/n" share
-of the data. In other words it load-balances among the subscribers rather than full copy.
-********************************************************************************
-
-A recommendation: run background processes such as `kvsp-tee`, `kvsp-pub`, and `kvsp-sub`,
-under a daemon supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr
-process monitor] to start them at system boot and ensure that they always stay running.
-
-Interop
-~~~~~~~
-While kvspool is only for Linux, it can interoperate (send or receive spool data) with any
-platform that supports ZeroMQ and JSON. The `kvsp-pub` and `kvsp-sub` simply send messages
-containing dictionaries formatted as JSON objects.
+[TIP]
+Use a daemon supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr
+process monitor] or a sysvinit script to start up these commands at boot up and keep them
+running in the background.
 
 License
 ~~~~~~~
@@ -145,11 +115,9 @@ Resources & Help
 News about software updates are posted to the author's blog: http://tkhanson.net/blog.
 Contact the author directly at tdh@tkhanson.net if you have questions or other issues.
 
-Build/install
--------------
-
-Download
-~~~~~~~~
+Getting kvspool
+---------------
+You can clone kvspool from github:
 
   % git clone git://github.com/troydhanson/kvspool.git
 
@@ -330,7 +298,7 @@ Utilities
 |===============================================================================
 
 The `kvsp-init` command is used when a spool directory is first created, to set 
-the maximum capacity of the spool. It accepts k/m/b/t suffixes. If `kvsp-init` is
+the maximum capacity of the spool. It accepts k/m/g/t suffixes. If `kvsp-init` is
 run later, after the spool already exists and has data, it is resized.
 
 Run `kvsp-status` to see what percentage of the spool has been consumed by a reader.
@@ -366,7 +334,7 @@ Giving the `-s` flag to both `kvsp-pub` and `kvsp-sub` changes the operation fro
 `kvsp-sub` instances each receive a "1/n" share of the data rather than full take.  Also,
 in regular mode a publisher to which no subscriber is connected will drop frames but in
 the special mode, the publisher retains data until a subscriber connects. (The data
-retention capacity is still limited to the size set by `kvsp-init`.)
+capacity is still limited by the value set in `kvsp-init`.)
 
 .Other utilities
 [width="90%",cols="10m,50m",grid="none",options="header"]
