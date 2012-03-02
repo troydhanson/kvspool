@@ -537,6 +537,40 @@ body.manpage div.sectionbody {
 @media print {
   body.manpage div#toc { display: none; }
 }
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -729,7 +763,7 @@ install: function(toclevels) {
 }
 
 }
-asciidoc.install();
+asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
@@ -739,7 +773,11 @@ asciidoc.install();
 <span id="author">Troy D. Hanson</span><br />
 <span id="email"><tt>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</tt></span><br />
 <span id="revnumber">version 0.5,</span>
-<span id="revdate">February 2012</span>
+<span id="revdate">March 2012</span>
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
 </div>
 <div id="content">
 <div id="preamble">
@@ -751,9 +789,8 @@ kv-spool ("key-value" spool)
 <dd>
 <p>
          a Linux-based C library, with Perl, Python and Java bindings, to stream data
-         between programs, in the form of key-value dictionaries (a.k.a., hashes).
-         The spool data is backed to disk, supports snapshot, rewind and replay,
-         network replication, and has configurable, steady-state disk consumption.
+         between programs as key-value dictionaries. The data stream is backed to disk,
+         supports rewind, snapshot, network replication, and bounded disk consumption.
 </p>
 </dd>
 </dl></div>
@@ -802,22 +839,9 @@ cellspacing="0" cellpadding="4">
 </tbody>
 </table>
 </div>
-<div class="paragraph"><p>The reader and writer transfer data through the spool on the disk. Since the data persists
-when the writer exits, the reader does not necessarily need to run at the same time. It
-can run later and read the data; conversely if you run the reader first, it blocks waiting
-for data to arrive in the spool.</p></div>
-<div class="sidebarblock">
-<div class="content">
-<div class="title">ramdisk: shared memory I/O</div>
-<div class="paragraph"><p>A ramdisk is a good place to store a spool if there&#8217;s a lot of data going in and out- if
-the data is dispensable. For convenience kvspool includes a <tt>ramdisk</tt> utility to make a
-tmpfs ramdisk, where you can make a spool directory.</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>ramdisk -c -s 2G /mnt/ramdisk
-mkdir /mnt/ramdisk/spool</tt></pre>
-</div></div>
-</div></div>
+<div class="paragraph"><p>Because the spooled data goes into the disk, the reader and writer are decoupled. They
+don&#8217;t have to run at the same time. They can come and go.  If the reader exits and
+restarts, it picks up where it left off.</p></div>
 <div class="sect2">
 <h3 id="_space_management">Space management</h3>
 <div class="paragraph"><p>In a streaming data environment, the writer and reader can run for months on end.  Because
@@ -828,46 +852,56 @@ When we make a spool directory, we tell kvspool what its maximum size should be:
 <pre><tt>% mkdir spool
 % kvsp-init -s 1G spool</tt></pre>
 </div></div>
-<div class="paragraph"><p>This tells kvspool to keep a maximum of 1 GB of data.  The spool directory enters "steady
-state" at that point, staying around 1 GB in size- even if the reader consumes it all.
-(The data is kept around to reserve that disk space, and to support rewind.) To make room
-for new data, the oldest data is deleted as needed.</p></div>
+<div class="paragraph"><p>This configures a maximum of 1 GB of data in the spool. After it reaches that size, it
+stays that size (by deleting old data as needed), but it never shrinks even if the data is
+fully read. (The data is kept around to reserve that disk space, and to support rewind.)</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">A ramdisk is a good place to put a busy spool if you don&#8217;t need disk persistence. Kvspool
+comes with a <a href="#other_utilities">utility</a> you can use to make one, or you can use <tt>/dev/shm</tt> too.</td>
+</tr></table>
+</div>
 </div>
 <div class="sect2">
-<h3 id="_loose_coupling">Loose coupling</h3>
-<div class="paragraph"><p>The spool accomodates readers and writers that come and go. This is a practical necessity
-with long running processes. By using the disk as an intermediate, kvspool "insulates"
-them from each other. If the writer goes down for a while (because it&#8217;s done, or it
-crashed, or in maintenance), the reader is unaffected and vice versa.</p></div>
-</div>
-<div class="sect2">
-<h3 id="_persistent_reader_position">Persistent reader position</h3>
-<div class="paragraph"><p>If the reader exits, and restarts, it picks up where it left off.  But if the reader is
-absent for a long time, it may miss some data, because the writer relentlessly ages off
-old data to keep the spool under its maximum size.</p></div>
+<h3 id="_data_attrition">Data attrition</h3>
+<div class="paragraph"><p>When the spool is full, and new data arrives, the writer deletes the oldest data to make
+room for new. The attrition is done in units that are about 10% of the total spool size.
+A reader that runs all the time, or often enough to keep up with the writer, sees all the
+data flowing through the spool. But a reader that&#8217;s offline for long enough can eventually
+lose data (that is, miss the opportunity to read it before it&#8217;s deleted). Data loss is a
+deliberate feature - otherwise it&#8217;d be necessary to block the writer or use unbounded
+disk space.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_rewind_and_replay">Rewind and replay</h3>
 <div class="paragraph"><p>The spool is a like a long reel-to-reel tape spliced together at the ends. Data remains in
-the spool after it&#8217;s been read, until the spool needs to reclaim the space. Kvspool takes
-advantage of this by supporting "rewind":</p></div>
+the spool after it&#8217;s been read, until the spool needs to reuse the space. Kvspool takes
+advantage of this history by offering "rewind":</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% kvsp-rewind spool</tt></pre>
 </div></div>
-<div class="paragraph"><p>If you run this (while the reader is not running- then start it up), reading starts at
-the beginning of the spool. This is also useful in conjunction with taking a "snapshot":</p></div>
+<div class="paragraph"><p>After a rewind, reading starts at the beginning of the spool. (The reader should be
+stopped before issuing the rewind).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_snapshot">Snapshot</h3>
+<div class="paragraph"><p>A snapshot is just a copy of the spool. You can bring the copy back to a development
+environment, rewind it, and use it as a consistent source of test data.</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% cp -r spool snapshot</tt></pre>
 </div></div>
-<div class="paragraph"><p>A snapshot is nothing more than a copy of the spool. Now you can bring it back to a
-development environment, rewind it, and use it as a consistent source of test data.</p></div>
+<div class="paragraph"><p>Copying a spool of "production data" is a great way to do development. The data is real,
+but there&#8217;s no need for the full production environment (no writer) needed to use it.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_fan_out_amp_network_replication">Fan-out &amp; Network Replication</h3>
-<div class="paragraph"><p>A spool is designed for one writer and one reader. If you need multiple readers you can
-tee out to multiple spools:</p></div>
+<h3 id="_local_and_network_replication">Local and Network Replication</h3>
+<div class="paragraph"><p>A spool supports one writer and one reader. To support multiple readers, "tee" it out so
+that each reader gets it&#8217;s own spool:</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% kvsp-tee -s spool copy1 copy2</tt></pre>
@@ -885,15 +919,15 @@ tee out to multiple spools:</p></div>
 <div class="paragraph"><p>Obviously, the IP address must be valid on the publisher side. The port is up to you. This
 type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
 you use the <tt>-s</tt> switch, on both pub and sub, it changes so each subscriber gets only a
-"1/n" share of the data. The latter mode is preferred for 1-1 network replication.</p></div>
+"1/n" share of the data. The latter mode is also preferred for 1-1 network replication.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
 <div class="title">Tip</div>
 </td>
 <td class="content">Use a daemon supervisor such as the author&#8217;s <a href="http://troydhanson.github.com/pmtr/">pmtr
-process monitor</a> or a sysvinit script to start up these commands at boot up and keep them
-running in the background.</td>
+process monitor</a> to start up these commands at boot up and keep them running in the
+background.</td>
 </tr></table>
 </div>
 </div>
@@ -916,228 +950,33 @@ Contact the author directly at <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.ne
 <div class="content">
 <pre><tt>% git clone git://github.com/troydhanson/kvspool.git</tt></pre>
 </div></div>
-<div class="paragraph"><p>To build it:</p></div>
+<div class="paragraph"><p>To build kvspool:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% cd kvspool
-% # if the 'configure' script does not yet exist, run ./bootstrap
-% ./configure
+<pre><tt>% cd kvspool</tt></pre>
+</div></div>
+<div class="paragraph"><p>If the <em>configure</em> script does not yet exist, run <tt>./bootstrap</tt>.  If you want to build the
+network replication utilities, make sure you have <strong>Jansson</strong> and <strong>ZeroMQ</strong> (2.x or 3.x).</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% ./configure
 % make
 % sudo make install</tt></pre>
 </div></div>
 <div class="paragraph"><p>This builds and installs the C library and utilities, and if the prerequisite packages
 are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based utilities.</p></div>
-<div class="paragraph"><p>While kvspool does not depend on other libraries, to build the Network Replication
-utilities you&#8217;ll need <strong>ZeroMQ</strong> (2.x or 3.x) and the <strong>Jansson</strong> library installed.</p></div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_examples_amp_api">Examples &amp; API</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_write_examples">Write examples</h3>
-<div class="paragraph"><p>We show a simple example of using the spool in Perl, Python and C here. Any time the
-"spool write" operation is invoked, the data is immediately copied out to the spool and
-available to a reader.</p></div>
-<div class="listingblock">
-<div class="title">Perl</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$h</span> <span style="color: #990000">=</span> <span style="color: #FF0000">{</span><span style="color: #FF0000">'day'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Wednesday'</span><span style="color: #990000">,</span> <span style="color: #FF0000">'user'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Troy'</span><span style="color: #FF0000">}</span><span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$v</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-<span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">write</span></span><span style="color: #990000">(</span><span style="color: #009900">$h</span><span style="color: #990000">);</span></tt></pre></div></div>
-<div class="listingblock">
-<div class="title">Python</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvpy
-d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">,</span><span style="color: #FF0000">"user"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Troy"</span><span style="color: #990000">}</span>
-kvpy<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">kvpy_write</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">,</span>d<span style="color: #990000">)</span></tt></pre></div></div>
-<div class="listingblock">
-<div class="title">C</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">#include</span></span> <span style="color: #FF0000">"kvspool.h"</span>
-<span style="color: #990000">...</span>
-<span style="color: #009900">void</span> <span style="color: #990000">*</span>sp <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-<span style="color: #009900">void</span> <span style="color: #990000">*</span>set <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_new</span></span><span style="color: #990000">();</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> <span style="color: #FF0000">"day"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> <span style="color: #FF0000">"user"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Troy"</span><span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_spool_write</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">);</span>
-<span style="color: #990000">...</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span>set<span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_free</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">);</span></tt></pre></div></div>
-</div>
-<div class="sect2">
-<h3 id="_read_examples">Read examples</h3>
-<div class="paragraph"><p>The reader blocks if no data is available (except in C where a non-blocking read is
-available). If data is available immediately, or when it becomes available, a hash or
-dictionary or C equivalent is returned.</p></div>
-<div class="listingblock">
-<div class="title">Perl</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$v</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$h</span> <span style="color: #990000">=</span> <span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">read</span></span><span style="color: #990000">();</span></tt></pre></div></div>
-<div class="listingblock">
-<div class="title">Python</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvpy
-d <span style="color: #990000">=</span> kvpy<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">kvpy_read</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span></tt></pre></div></div>
-<div class="listingblock">
-<div class="title">C</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">#include</span></span> <span style="color: #FF0000">"kvspool.h"</span>
-<span style="color: #990000">...</span>
-<span style="color: #009900">void</span> <span style="color: #990000">*</span>sp <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-<span style="color: #009900">void</span> <span style="color: #990000">*</span>set <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_new</span></span><span style="color: #990000">();</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_spool_read</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">);</span>
-<span style="color: #990000">...</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span>set<span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_free</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">);</span></tt></pre></div></div>
-</div>
-<div class="sect2">
-<h3 id="_api">API</h3>
-<div class="sect3">
-<h4 id="_c_c">C/C++</h4>
-<div class="paragraph"><p>Programs written against the kvspool API can be linked with -lkvspool. Since both reading
-and writing to the spool in C requires a "dictionary" data structure, one is included.</p></div>
-<div class="sect4">
-<h5 id="_reader">Reader</h5>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #009900">void</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_new</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>dir<span style="color: #990000">);</span>
-<span style="color: #009900">int</span> <span style="font-weight: bold"><span style="color: #000000">kv_spool_read</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>sp<span style="color: #990000">,</span> <span style="color: #009900">void</span> <span style="color: #990000">*</span>set<span style="color: #990000">,</span> <span style="color: #009900">int</span> blocking<span style="color: #990000">);</span>
-<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_free</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*);</span></tt></pre></div></div>
-<div class="paragraph"><p>This is also a programmatic equal of the <tt>kvsp-rewind</tt> command which can be used when the
-reader does not have the spool open:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">sp_reset</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>dir<span style="color: #990000">);</span></tt></pre></div></div>
-</div>
-<div class="sect4">
-<h5 id="_writer">Writer</h5>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #009900">void</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_new</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>dir<span style="color: #990000">);</span>
-<span style="color: #009900">int</span> <span style="font-weight: bold"><span style="color: #000000">kv_spool_write</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>sp<span style="color: #990000">,</span> <span style="color: #009900">void</span> <span style="color: #990000">*</span>set<span style="color: #990000">);</span>
-<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_free</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*);</span></tt></pre></div></div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_dictionary">Dictionary</h4>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #009900">void</span><span style="color: #990000">*</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_new</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">);</span>
-<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*);</span>
-<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_clear</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*);</span>
-<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_dump</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span> <span style="color: #990000">*</span>set<span style="color: #990000">,</span><span style="color: #008080">FILE</span> <span style="color: #990000">*</span>out<span style="color: #990000">);</span>
-<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">kv_add</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">,</span> <span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>key<span style="color: #990000">,</span> <span style="color: #009900">int</span> klen<span style="color: #990000">,</span> <span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>val<span style="color: #990000">,</span> <span style="color: #009900">int</span> vlen<span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #000080">#define</span></span> <span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> key<span style="color: #990000">,</span> val<span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #000000">kv_add</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span>key<span style="color: #990000">,</span><span style="font-weight: bold"><span style="color: #000000">strlen</span></span><span style="color: #990000">(</span>key<span style="color: #990000">),</span>val<span style="color: #990000">,</span><span style="font-weight: bold"><span style="color: #000000">strlen</span></span><span style="color: #990000">(</span>val<span style="color: #990000">))</span>
-<span style="color: #008080">kv_t</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_get</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">,</span> <span style="color: #009900">char</span> <span style="color: #990000">*</span>key<span style="color: #990000">);</span>
-<span style="color: #009900">int</span> <span style="font-weight: bold"><span style="color: #000000">kv_len</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">);</span>
-<span style="color: #008080">kv_t</span> <span style="color: #990000">*</span><span style="font-weight: bold"><span style="color: #000000">kv_next</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">*</span>set<span style="color: #990000">,</span><span style="color: #008080">kv_t</span> <span style="color: #990000">*</span>kv<span style="color: #990000">);</span></tt></pre></div></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">typedef</span></span> <span style="font-weight: bold"><span style="color: #0000FF">struct</span></span> <span style="color: #FF0000">{</span>
-  <span style="color: #009900">char</span> <span style="color: #990000">*</span>key<span style="color: #990000">;</span>
-  <span style="color: #009900">int</span> klen<span style="color: #990000">;</span>
-  <span style="color: #009900">char</span> <span style="color: #990000">*</span>val<span style="color: #990000">;</span>
-  <span style="color: #009900">int</span> vlen<span style="color: #990000">;</span>
-<span style="color: #FF0000">}</span> kv_t<span style="color: #990000">;</span></tt></pre></div></div>
-<div class="paragraph"><p>A C program can iterate through all the keys/values like:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #008080">kv_t</span> <span style="color: #990000">*</span>kv <span style="color: #990000">=</span> NULL<span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">while</span></span> <span style="color: #990000">(</span> <span style="color: #990000">(</span>kv <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_next</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> kv<span style="color: #990000">)))</span> <span style="color: #FF0000">{</span>
-  <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"key is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>key<span style="color: #990000">);</span>
-  <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"value is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>val<span style="color: #990000">);</span>
-<span style="color: #FF0000">}</span></tt></pre></div></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_perl">Perl</h3>
-<div class="paragraph"><p>In Perl, to use the module and open a spool for reading or writing:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$v</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span></tt></pre></div></div>
-<div class="paragraph"><p>Then to read:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$h</span> <span style="color: #990000">=</span> <span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">read</span></span><span style="color: #990000">();</span> <span style="font-style: italic"><span style="color: #9A1900"># returns a hash reference</span></span></tt></pre></div></div>
-<div class="paragraph"><p>Similarly to write:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">write</span></span><span style="color: #990000">(</span><span style="color: #009900">$h</span><span style="color: #990000">);</span> <span style="font-style: italic"><span style="color: #9A1900"># where h is a hash reference</span></span></tt></pre></div></div>
-</div>
-<div class="sect2">
-<h3 id="_python">Python</h3>
-<div class="paragraph"><p>As of the current version kvspool only has a procedural interface for Python. If d is a
-dicionary then the API to write or read a frame is simply:</p></div>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.3
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvpy
-kvpy<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">kvpy_write</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">,</span>d<span style="color: #990000">)</span>
-d <span style="color: #990000">=</span> kvpy<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">kvpy_read</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span></tt></pre></div></div>
-</div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="_utilities">Utilities</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_basic">Basic</h3>
 <div class="tableblock">
 <table rules="none"
 width="90%"
 frame="border"
 cellspacing="0" cellpadding="4">
-<caption class="title">Table 2. Basic utilities</caption>
 <col width="16%" />
 <col width="83%" />
 <thead>
@@ -1167,7 +1006,7 @@ cellspacing="0" cellpadding="4">
 </table>
 </div>
 <div class="paragraph"><p>The <tt>kvsp-init</tt> command is used when a spool directory is first created, to set
-the maximum capacity of the spool. It accepts k/m/b/t suffixes. If <tt>kvsp-init</tt> is
+the maximum capacity of the spool. It accepts k/m/g/t suffixes. If <tt>kvsp-init</tt> is
 run later, after the spool already exists and has data, it is resized.</p></div>
 <div class="paragraph"><p>Run <tt>kvsp-status</tt> to see what percentage of the spool has been consumed by a reader.</p></div>
 <div class="paragraph"><p>The <tt>kvsp-rewind</tt> command resets the reader position to the beginning (oldest frame) in the
@@ -1178,12 +1017,14 @@ spool directory for each reader (and use <tt>kvsp-init</tt> to set the capacity 
 then use <tt>kvsp-tee</tt> as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
 maintain the tee.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_network_utilities">Network utilities</h3>
 <div class="tableblock">
 <table rules="none"
 width="90%"
 frame="border"
 cellspacing="0" cellpadding="4">
-<caption class="title">Table 3. Network utilities</caption>
 <col width="16%" />
 <col width="83%" />
 <thead>
@@ -1215,13 +1056,15 @@ reader to the local stream, while <tt>kvsp-sub</tt> acts as the writer on remote
 <tt>kvsp-sub</tt> instances each receive a "1/n" share of the data rather than full take.  Also,
 in regular mode a publisher to which no subscriber is connected will drop frames but in
 the special mode, the publisher retains data until a subscriber connects. (The data
-retention capacity is still limited to the size set by <tt>kvsp-init</tt>.)</p></div>
+capacity is still limited by the value set in <tt>kvsp-init</tt>.)</p></div>
+</div>
+<div class="sect2">
+<h3 id="other_utilities">Other utilities</h3>
 <div class="tableblock">
 <table rules="none"
 width="90%"
 frame="border"
 cellspacing="0" cellpadding="4">
-<caption class="title">Table 4. Other utilities</caption>
 <col width="16%" />
 <col width="83%" />
 <thead>
@@ -1278,8 +1121,125 @@ and show its size.  The <tt>ramdisk</tt> utility is included with kvspool becaus
 convenient to locate a spool on a ramdisk for performance.</p></div>
 </div>
 </div>
+</div>
 <div class="sect1">
-<h2 id="_notes">Notes</h2>
+<h2 id="_examples_amp_api">Examples &amp; API</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_perl">Perl</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
+<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$v</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
+<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$h</span> <span style="color: #990000">=</span> <span style="color: #FF0000">{</span><span style="color: #FF0000">'day'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Wednesday'</span><span style="color: #990000">,</span> <span style="color: #FF0000">'user'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Troy'</span><span style="color: #FF0000">}</span><span style="color: #990000">;</span>
+<span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">write</span></span><span style="color: #990000">(</span><span style="color: #009900">$h</span><span style="color: #990000">);</span></tt></pre></div></div>
+<div class="paragraph"><p>In Perl the KVSpool object is instantiated with one directory argument. Then every time
+the <tt>write</tt> method is called with a hash reference as argument, it&#8217;s written to the spool.
+To read a spool, use the <tt>read</tt> method which returns a hash reference each times it&#8217;s
+called:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>my $h = $v-&gt;read();</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_python">Python</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvpy
+d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">,</span><span style="color: #FF0000">"user"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Troy"</span><span style="color: #990000">}</span>
+kvpy<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">kvpy_write</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">,</span>d<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>In Python the current implementation only has two functions: <tt>kvpy_write</tt> and <tt>kvpy_read</tt>.
+These take the spool directory as argument. The write function takes a dictionary as its
+second argument. The read function returns a dictionary:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>d = kvpy.kvpy_read("spool")</tt></pre>
+</div></div>
+<div class="paragraph"><p>Adding an OO interface to kvpy is on the "to do" list.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_c_c">C/C++</h3>
+<div class="paragraph"><p>C programs must be linked with -lkvspool.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">#include</span></span> <span style="color: #FF0000">"kvspool.h"</span>
+<span style="color: #990000">...</span>
+<span style="color: #009900">void</span> <span style="color: #990000">*</span>sp <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
+<span style="color: #009900">void</span> <span style="color: #990000">*</span>set <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_new</span></span><span style="color: #990000">();</span>
+<span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> <span style="color: #FF0000">"day"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">);</span>
+<span style="font-weight: bold"><span style="color: #000000">kv_adds</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> <span style="color: #FF0000">"user"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Troy"</span><span style="color: #990000">);</span>
+<span style="font-weight: bold"><span style="color: #000000">kv_spool_write</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">);</span>
+<span style="color: #990000">...</span>
+<span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span>set<span style="color: #990000">);</span>
+<span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_free</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">);</span></tt></pre></div></div>
+<div class="paragraph"><p>In C, a spool is opened for writing by calling <tt>kv_spoolwriter_new</tt> which takes the spool
+directory as argument. It returns an opaque handle (which you should eventually free with
+<tt>kv_spoolwriter_free</tt>).</p></div>
+<div class="paragraph"><p>Kvspool provides a data structure that implements a dictionary in C. It is created using
+<tt>kv_set_new</tt> which returns an opaque handle (which should eventually be freed using
+<tt>kv_set_free</tt>). In the meantime, it can be used for the whole lifetime of the program, by
+adding key-value pairs to it, writing them out, clearing it, and reusing it over and over.
+To add a key-value pair, use <tt>kv_adds</tt> which takes the set handle, the key and the value.
+The key and value get <em>copied</em> into the set (the set does not keep a pointer to them).
+To write the set into the spool, call <tt>kv_spool_write</tt> with the spool and set handle.
+To re-use the set, call <tt>kv_set_clear</tt> with the set handle. For debugging you can dump a
+set to stderr using <tt>kv_set_dump(set,stderr)</tt>.</p></div>
+<div class="paragraph"><p>To open a spool for reading, call <tt>kv_spoolreader_new</tt> which takes the spool directory and
+returns an opaque handle to the spool.  Then call <tt>kv_spool_read</tt> to read the spool.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #009900">void</span> <span style="color: #990000">*</span>sp <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
+<span style="color: #009900">void</span> <span style="color: #990000">*</span>set <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_new</span></span><span style="color: #990000">();</span>
+<span style="font-weight: bold"><span style="color: #000000">kv_spool_read</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">);</span></tt></pre></div></div>
+<div class="paragraph"><p>The final argument to <tt>kv_spool_read</tt> specifies whether it should block if there is no
+data ready in the spool. A positive return value means success (data was read from the
+spool and it&#8217;s been populated into the set).  A C program can iterate through all the
+key-value pairs in the set like this:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #008080">kv_t</span> <span style="color: #990000">*</span>kv <span style="color: #990000">=</span> NULL<span style="color: #990000">;</span>
+<span style="font-weight: bold"><span style="color: #0000FF">while</span></span> <span style="color: #990000">(</span> <span style="color: #990000">(</span>kv <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_next</span></span><span style="color: #990000">(</span>set<span style="color: #990000">,</span> kv<span style="color: #990000">)))</span> <span style="color: #FF0000">{</span>
+  <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"key is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>key<span style="color: #990000">);</span>
+  <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"value is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>val<span style="color: #990000">);</span>
+<span style="color: #FF0000">}</span></tt></pre></div></div>
+<div class="paragraph"><p>You can also fetch a particular key-value pair from the set using <tt>kv_get</tt> and providing
+the key as the final argument:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>kv_t *kv = kv_get(set, "user");</tt></pre>
+</div></div>
+<div class="paragraph"><p>The number of key-value pairs in the set can be obtained using <tt>kv_len</tt>:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>int count = kv_len(set);</tt></pre>
+</div></div>
+<div class="paragraph"><p>The C API also has a function to rewind the spool, which works if there is no reader that
+has the spool open at the time. It takes the spool directory as its only argument.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>sp_reset(dir);</tt></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_roadmap">Roadmap</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Kvspool is a young library and has some rough edges and room for improvement.</p></div>
 <div class="ulist"><ul>
@@ -1315,7 +1275,7 @@ Test suite is minimal, although kvspool has extensive production use
 </li>
 <li>
 <p>
-Support multi-writer, multi-reader (see <a href="future.txt">future.txt</a>)
+Support multi-writer, multi-reader (see doc/future.txt)
 </p>
 </li>
 <li>
@@ -1331,12 +1291,19 @@ Use JSON internally
 </ul></div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_acknowledgments">Acknowledgments</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Special thanks to Trevor Adams for writing the Perl and Java bindings and to
+<a href="http://jhuapl.edu/ott">JHU/APL OTT</a> for their support.</p></div>
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
 Version 0.5<br />
-Last updated 2012-02-29 07:46:36 EST
+Last updated 2012-03-01 23:11:36 EST
 </div>
 </div>
 </body>
