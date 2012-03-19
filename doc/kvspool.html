@@ -772,7 +772,7 @@ asciidoc.install(2);
 <h1>kvspool: a tool for data streams</h1>
 <span id="author">Troy D. Hanson</span><br />
 <span id="email"><tt>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</tt></span><br />
-<span id="revnumber">version 0.5,</span>
+<span id="revnumber">version 0.6,</span>
 <span id="revdate">March 2012</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
@@ -802,44 +802,33 @@ kv-spool ("key-value" spool)
 <div class="paragraph"><p>Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message-passing
 library. Its "unit of data" is the <strong>dictionary</strong>. (Or so Python calls it). Perl calls it a
 hash. It&#8217;s a set of key-value pairs.</p></div>
-<div class="paragraph"><p>To use kvspool, two programs open the same spool (which is just a directory). The reader
-gets dictionaries from the spool, blocking when it&#8217;s caught up; the writer puts
-dictionaries into the spool. Like this,</p></div>
-<div class="tableblock">
-<table rules="cols"
-width="100%"
-frame="border"
-cellspacing="0" cellpadding="4">
-<caption class="title">Table 1. Sneak peak</caption>
-<col width="50%" />
-<col width="50%" />
-<thead>
-<tr>
-<th align="left" valign="top"> Sample Perl writer                       </th>
-<th align="left" valign="top">  Sample C reader</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>use KVSpool;</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>#include "kvspool.h"</tt></p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>my $v = KVSpool&#8594;new("spool");</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>void *sp = kv_spoolreader_new("spool");</tt></p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>my $h = {'day'&#8658;'Wed','temp'&#8658;37};</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>void *set = kv_set_new();</tt></p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>$v&#8594;write($h);</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kv_spool_read(sp,set,1);</tt></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="paragraph"><p>Because the spooled data goes into the disk, the reader and writer are decoupled. They
+<div class="paragraph"><p>To use kvspool, two programs open the same spool (which is just a directory). The writer
+puts dictionaries into the spool.  The reader gets dictionaries from the spool, blocking
+when it&#8217;s caught up.  Like this,</p></div>
+<div class="paragraph"><p><span class="image">
+<img src="reader-writer.png" alt="A spool writer and reader" />
+</span></p></div>
+<div class="paragraph"><div class="title">Sneak peak</div><p>Here&#8217;s a sneak peak at a really simple writer and reader:</p></div>
+<div class="listingblock">
+<div class="title">Sample Python writer</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvspool
+kv <span style="color: #990000">=</span> kvspool<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">Kvspool</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span>
+d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span> <span style="color: #FF0000">"Wed"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"temp"</span><span style="color: #990000">:</span> <span style="color: #993399">37</span><span style="color: #990000">}</span>
+kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>d<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="listingblock">
+<div class="title">Sample Perl reader</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
+<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$kv</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
+<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$d</span> <span style="color: #990000">=</span> <span style="color: #009900">$kv</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">read</span></span><span style="color: #990000">();</span></tt></pre></div></div>
+<div class="paragraph"><div class="title">Loose coupling</div><p>Because the spooled data goes into the disk, the reader and writer are decoupled. They
 don&#8217;t have to run at the same time. They can come and go.  If the reader exits and
 restarts, it picks up where it left off.</p></div>
 <div class="sect2">
@@ -855,15 +844,11 @@ When we make a spool directory, we tell kvspool what its maximum size should be:
 <div class="paragraph"><p>This configures a maximum of 1 GB of data in the spool. After it reaches that size, it
 stays that size (by deleting old data as needed), but it never shrinks even if the data is
 fully read. (The data is kept around to reserve that disk space, and to support rewind.)</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">A ramdisk is a good place to put a busy spool if you don&#8217;t need disk persistence. Kvspool
-comes with a <a href="#other_utilities">utility</a> you can use to make one, or you can use <tt>/dev/shm</tt> too.</td>
-</tr></table>
 </div>
+<div class="sect2">
+<h3 id="_shared_memory_i_o">Shared memory I/O</h3>
+<div class="paragraph"><p>You can locate a spool on a RAM disk if you want the speed of shared memory without true
+disk persistence- kvspool comes with a <tt>ramdisk</tt> utility to make one easily.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_data_attrition">Data attrition</h3>
@@ -878,7 +863,7 @@ disk space.</p></div>
 <div class="sect2">
 <h3 id="_rewind_and_replay">Rewind and replay</h3>
 <div class="paragraph"><p>The spool is a like a long reel-to-reel tape spliced together at the ends. Data remains in
-the spool after it&#8217;s been read, until the spool needs to reuse the space. Kvspool takes
+the spool, even after being read, until the spool needs to reuse the space. Kvspool takes
 advantage of this history by offering "rewind":</p></div>
 <div class="literalblock">
 <div class="content">
@@ -920,6 +905,24 @@ that each reader gets it&#8217;s own spool:</p></div>
 type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
 you use the <tt>-s</tt> switch, on both pub and sub, it changes so each subscriber gets only a
 "1/n" share of the data. The latter mode is also preferred for 1-1 network replication.</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">The big picture</div>
+<div class="paragraph"><p>Before moving on- let&#8217;s take a deep breath and recap. With kvspool, the writer
+is completely unaware (blissfully ignorant) of whether network replication is
+taking place. The writer just writes to the local spool directory. We run the
+<tt>kvsp-pub</tt> utility in the background; as data comes into the spool, it transmits
+it on the network.</p></div>
+<div class="paragraph"><p>On the other computer (the receiving side), we run <tt>kvsp-sub</tt> in the background.
+It receives the network transmissions, and writes them to its local spool.</p></div>
+<div class="paragraph"><p>Using <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt>, we completely decouple the writer and reader
+from having to run on the same computer. They maintain a live, continuous
+replication. Whenever data is written to the source spool, it just "shows up"
+in the remote spool.</p></div>
+</div></div>
+<div class="paragraph"><p><span class="image">
+<img src="pub-sub.png" alt="Publish and Subscribe" />
+</span></p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1152,17 +1155,15 @@ called:</p></div>
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvpy
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvspool
+kv <span style="color: #990000">=</span> kvspool<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">Kvspool</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span>
 d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">,</span><span style="color: #FF0000">"user"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Troy"</span><span style="color: #990000">}</span>
-kvpy<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">kvpy_write</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">,</span>d<span style="color: #990000">)</span></tt></pre></div></div>
-<div class="paragraph"><p>In Python the current implementation only has two functions: <tt>kvpy_write</tt> and <tt>kvpy_read</tt>.
-These take the spool directory as argument. The write function takes a dictionary as its
-second argument. The read function returns a dictionary:</p></div>
+kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>d<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>The <tt>write</tt> method takes a dictionary, while the <tt>read</tt> method returns a dictionary:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>d = kvpy.kvpy_read("spool")</tt></pre>
+<pre><tt>d = kv.read()</tt></pre>
 </div></div>
-<div class="paragraph"><p>Adding an OO interface to kvpy is on the "to do" list.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_c_c">C/C++</h3>
@@ -1245,11 +1246,6 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div class="ulist"><ul>
 <li>
 <p>
-The Python API needs an OO wrapper (it only has a procedural one right now).
-</p>
-</li>
-<li>
-<p>
 The Java API needs documentation and unit tests.
 </p>
 </li>
@@ -1302,8 +1298,8 @@ Use JSON internally
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 0.5<br />
-Last updated 2012-03-01 23:11:36 EST
+Version 0.6<br />
+Last updated 2012-03-18 22:26:51 EDT
 </div>
 </div>
 </body>
