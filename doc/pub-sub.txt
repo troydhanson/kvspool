@@ -6,6 +6,6 @@
  |          |   +-------+   |  +--------+   |          |
  \----------/       |       |       ^       \----------/
                     v       |       |
-                 kvsp-pub<----->kvsp-sub
+                 kvsp-pub------>kvsp-sub
                             | 
       COMPUTER A            |          COMPUTER B

@@ -1,5 +1,5 @@
 all: reader-writer.png pub-sub.png kvspool.html
-DITAA=java -jar ditaa0_9.jar
+DITAA=java -jar ditaa0_9.jar -o
 
 reader-writer.png: reader-writer.txt
 	$(DITAA) $<

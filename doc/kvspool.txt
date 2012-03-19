@@ -114,9 +114,9 @@ you use the `-s` switch, on both pub and sub, it changes so each subscriber gets
 *******************************************************************************
 Before moving on- let's take a deep breath and recap. With kvspool, the writer
 is completely unaware (blissfully ignorant) of whether network replication is
-taking place. The writer just writes to the local spool directory. We run the
-`kvsp-pub` utility in the background; as data comes into the spool, it transmits
-it on the network.
+taking place. The writer just writes to the local spool. We run the `kvsp-pub` 
+utility in the background; as data comes into the spool, it transmits it on the 
+network.
 
 On the other computer (the receiving side), we run `kvsp-sub` in the background. 
 It receives the network transmissions, and writes them to its local spool.
