@@ -311,10 +311,13 @@ EOD`
   via the LDFLAGS environment variable.
   Example: ./configure LDFLAGS="-L/usr/non-standard-path/python/lib"
   ============================================================================
-   You may have to install the development version of the Python package
-   for your distribution.  The exact name of this package varies among them.
-   For example, the package may be called "python2.6-dev". For now, we are
-   skipping the build of the Python kvspool module
+   Skipping the build of the Python kvspool module.
+
+   You may need to install your platform's package equivalents for 
+
+   python2.6-dev or other version
+   libssl-dev
+
   ============================================================================
 	   ])
 	  PYTHON_VERSION=""

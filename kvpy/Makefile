@@ -1,6 +1,6 @@
-all: kvpy
+all: kvspool
 
-kvpy: kvpymodule.c ../libkvspool.a
+kvspool: kvspool.c ../src/libkvspool.a
 	rm -rf build 
 	python build.py build
 

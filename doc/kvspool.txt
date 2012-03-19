@@ -1,7 +1,7 @@
 kvspool: a tool for data streams
 ================================
 Troy D. Hanson <tdh@tkhanson.net>
-v0.5, March 2012
+v0.6, March 2012
 
 kv-spool ("key-value" spool):: 
          a Linux-based C library, with Perl, Python and Java bindings, to stream data
@@ -14,20 +14,29 @@ Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message
 library. Its "unit of data" is the *dictionary*. (Or so Python calls it). Perl calls it a
 hash. It's a set of key-value pairs.
 
-To use kvspool, two programs open the same spool (which is just a directory). The reader
-gets dictionaries from the spool, blocking when it's caught up; the writer puts
-dictionaries into the spool. Like this,
+To use kvspool, two programs open the same spool (which is just a directory). The writer
+puts dictionaries into the spool.  The reader gets dictionaries from the spool, blocking
+when it's caught up.  Like this,
+
+image:reader-writer.png[A spool writer and reader]
 
 .Sneak peak
-[options="header",cols="20m,20m",grid="cols"]
-|===============================================================================
-| Sample Perl writer                       |  Sample C reader
-| use KVSpool;                             |  #include "kvspool.h"
-| my $v = KVSpool->new("spool");           |  void *sp = kv_spoolreader_new("spool");
-| my $h = {\'day\'=>\'Wed\',\'temp'=>37};  |  void *set = kv_set_new();
-| $v->write($h);                           |  kv_spool_read(sp,set,1);
-|===============================================================================
+Here's a sneak peak at a really simple writer and reader:
 
+.Sample Python writer                      
+[source,python]
+  import kvspool                          
+  kv = kvspool.Kvspool("spool")          
+  d = {"day": "Wed", "temp": 37}        
+  kv.write(d)                                                          
+
+.Sample Perl reader
+[source,perl]
+ use KVSpool;        
+ my $kv = KVSpool->new("spool");
+ my $d = $kv->read(); 
+
+.Loose coupling
 Because the spooled data goes into the disk, the reader and writer are decoupled. They
 don't have to run at the same time. They can come and go.  If the reader exits and
 restarts, it picks up where it left off.
@@ -45,9 +54,10 @@ This configures a maximum of 1 GB of data in the spool. After it reaches that si
 stays that size (by deleting old data as needed), but it never shrinks even if the data is
 fully read. (The data is kept around to reserve that disk space, and to support rewind.) 
 
-[TIP]
-A ramdisk is a good place to put a busy spool if you don't need disk persistence. Kvspool
-comes with a <<other_utilities,utility>> you can use to make one, or you can use `/dev/shm` too.
+Shared memory I/O
+~~~~~~~~~~~~~~~~~
+You can locate a spool on a RAM disk if you want the speed of shared memory without true
+disk persistence- kvspool comes with a `ramdisk` utility to make one easily. 
 
 Data attrition
 ~~~~~~~~~~~~~~
@@ -62,7 +72,7 @@ disk space.
 Rewind and replay
 ~~~~~~~~~~~~~~~~~
 The spool is a like a long reel-to-reel tape spliced together at the ends. Data remains in
-the spool after it's been read, until the spool needs to reuse the space. Kvspool takes
+the spool, even after being read, until the spool needs to reuse the space. Kvspool takes
 advantage of this history by offering "rewind":
 
   % kvsp-rewind spool
@@ -99,6 +109,25 @@ Obviously, the IP address must be valid on the publisher side. The port is up to
 type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
 you use the `-s` switch, on both pub and sub, it changes so each subscriber gets only a
 "1/n" share of the data. The latter mode is also preferred for 1-1 network replication.
+
+.The big picture
+*******************************************************************************
+Before moving on- let's take a deep breath and recap. With kvspool, the writer
+is completely unaware (blissfully ignorant) of whether network replication is
+taking place. The writer just writes to the local spool directory. We run the
+`kvsp-pub` utility in the background; as data comes into the spool, it transmits
+it on the network.
+
+On the other computer (the receiving side), we run `kvsp-sub` in the background. 
+It receives the network transmissions, and writes them to its local spool.
+
+Using `kvsp-pub` and `kvsp-sub`, we completely decouple the writer and reader
+from having to run on the same computer. They maintain a live, continuous
+replication. Whenever data is written to the source spool, it just "shows up"
+in the remote spool.
+*******************************************************************************
+
+image:pub-sub.png[Publish and Subscribe]
 
 [TIP]
 Use a daemon supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr
@@ -252,17 +281,14 @@ called:
 Python
 ~~~~~~
 [source,python]
-  import kvpy
+  import kvspool
+  kv = kvspool.Kvspool("spool")
   d = {"day":"Wednesday","user":"Troy"}
-  kvpy.kvpy_write("spool",d)
+  kv.write(d)
 
-In Python the current implementation only has two functions: `kvpy_write` and `kvpy_read`.
-These take the spool directory as argument. The write function takes a dictionary as its
-second argument. The read function returns a dictionary:
+The `write` method takes a dictionary, while the `read` method returns a dictionary:
 
-  d = kvpy.kvpy_read("spool")
-
-Adding an OO interface to kvpy is on the "to do" list.
+  d = kv.read()
 
 C/C++
 ~~~~~
@@ -332,7 +358,6 @@ Roadmap
 -------
 Kvspool is a young library and has some rough edges and room for improvement.
 
-* The Python API needs an OO wrapper (it only has a procedural one right now).
 * The Java API needs documentation and unit tests.
 * The C API has some deprecated functions to support binary values 
 * It's only been tested with Ubuntu 10.04

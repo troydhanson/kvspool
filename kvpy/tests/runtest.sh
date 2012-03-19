@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SPW=../../tests/spw 
+SPW=../../utils/kvsp-spw 
 export PYTHONPATH="../build/lib.linux-i686-2.6"
 
 # sanity checks

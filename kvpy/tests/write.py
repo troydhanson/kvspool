@@ -5,8 +5,7 @@
 import sys
 sys.path.append("../build/lib.linux-i686-2.6")
 
-import kvpy
-while True:
-  d = kvpy.kvpy_read("spool",1)
-  for key in d.keys():
-    print "key: " + key + " value: " + d[key]
+import kvspool
+kv = kvspool.Kvspool("spool")
+d = {"key":"value","key2":"value2"}
+kv.write(d)

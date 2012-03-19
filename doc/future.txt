@@ -60,3 +60,19 @@ Design concepts for "v2" rewrite of kvspool
                  and going into a select/epoll).
     (2) If reader needs persistence for its read position it should 
         store its own sequence number and identifier in the spool dir
+6. Key repetition
+   (1) if every frame tends to repeat the same keys or a subset of a 
+       relatively small set of keys (as is typically expected) then
+       the keys are highly redundant and suitable for compression
+   (2) one option is to use indexes instead of the keys themselves;
+       seperately a key-store would be maintained with a table 
+       (into which the index points) whose value is the offset on
+       disk of the key itself. Adds complexity but saves a lot of
+       space. Alternatively some kind of run time compression on
+       the frames is possible particularly if some kind of frame
+       history is kept (e.g. as with video, key frames at intervals
+       would keep the whole keys, into which the indexes would point
+       for subsequent frames; this would complicate the cyclic 
+       wraparound logic for recycling old frames by pushing it to
+       key-frame boundaries
+

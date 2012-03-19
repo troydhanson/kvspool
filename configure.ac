@@ -18,6 +18,11 @@ AC_CHECK_LIB(zmq,zmq_init,
   AM_CONDITIONAL(HAVE_ZEROMQ,true),
   AM_CONDITIONAL(HAVE_ZEROMQ,false))
 
+# is SSL installed. Not sure why Python build requires
+AC_CHECK_LIB(ssl,SSL_library_init,
+  AM_CONDITIONAL(HAVE_SSL,true),
+  AM_CONDITIONAL(HAVE_SSL,false))
+
 AX_PYTHON_DEVEL(>= '2.4')
 AM_CONDITIONAL(HAVE_PYTHON,test "x$pythonexists" = "xyes") 
 
