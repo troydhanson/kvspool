@@ -136,7 +136,7 @@ background.
 
 License
 ~~~~~~~
-See the link:LICENSE[LICENSE] file. Kvspool is free and open source.
+See the link:LICENSE.txt[LICENSE.txt] file. Kvspool is free and open source.
 
 Resources & Help 
 ~~~~~~~~~~~~~~~~

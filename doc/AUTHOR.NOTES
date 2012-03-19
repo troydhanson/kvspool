@@ -1,9 +1,11 @@
-asciidoc -a theme=flask kvspool.txt
-cp kvspool.html /tmp
+asciidoc -a toc2 kvspool.txt
+cp kvspool.html *.png /tmp
 cd ..
 git checkout gh-pages
+#git clean -d -f 
 cp /tmp/kvspool.html index.html
-git add index.html
+cp /tmp/*.png .
+git add index.html *.png
 git commit -m "page update"
 git push
 
