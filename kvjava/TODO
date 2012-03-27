@@ -1,0 +1,5 @@
+JNIINC and JNILIB need to be done in autoconf test
+the spool writer works but there's a bug in the reader hash map construction
+javac TestKJava.java
+java TestKVJava
+should be included in build process
