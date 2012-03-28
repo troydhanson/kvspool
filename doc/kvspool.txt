@@ -290,6 +290,36 @@ The `write` method takes a dictionary, while the `read` method returns a diction
 
   d = kv.read()
 
+Java
+~~~~
+[source,java]
+  public class TestKVJava {
+    static {
+       System.loadLibrary("KVJava");
+    }
+    public static void main(String args[]) {
+      KVJava kv = new KVJava("spool");
+      HashMap<String,String> h = new HashMap<String,String>();
+      h.put("day",  "Wednesday");
+      h.put("user", "Troy");
+      kv.write(h);
+    }
+  }
+
+The example loads the JNI library `KVJava`, instantiates an object of that class, and
+passes a `HashMap<String,String>` into its `write` method. The `read` method is similar:
+
+    HashMap<String,String> m;
+    m = kv.read();
+
+.Building the JNI library
+The Java binding is not yet integrated into the main build, so it requires extra steps to
+build. After building kvspool, `cd kvjava` and run `make`. Most likely you will need to 
+edit the `kvjava/Makefile` lines where `JNIINC` and `JNILIB` are defined to make it work.
+The result of compilation is `libKVJava.so` which must be manually copied to your choice
+of library directory such as `/usr/local/lib` (you may also need to set `LD_LIBRARY_PATH`
+so that the dynamic linker can find it).  Finally you can run `make test` to try it.
+ 
 C/C++
 ~~~~~
 C programs must be linked with -lkvspool. 
@@ -358,7 +388,6 @@ Roadmap
 -------
 Kvspool is a young library and has some rough edges and room for improvement.
 
-* The Java API needs documentation and unit tests.
 * The C API has some deprecated functions to support binary values 
 * It's only been tested with Ubuntu 10.04
 * Autoconf detection for Perl, Python, Java should be improved

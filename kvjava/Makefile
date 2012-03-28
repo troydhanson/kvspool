@@ -15,6 +15,7 @@ libKVJava.so: KVJava.h KVJava.class KVJava.c
 .PHONY: clean test
 
 test: 
+	mkdir -p /tmp/spool
 	javac TestKVJava.java
 	java TestKVJava
 
