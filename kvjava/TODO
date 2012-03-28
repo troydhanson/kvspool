@@ -1,1 +1,2 @@
 JNIINC and JNILIB need to be done in autoconf test
+detect jni
