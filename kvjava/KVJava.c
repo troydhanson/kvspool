@@ -15,7 +15,9 @@ static kvsp_handle_t *get_handle(JNIEnv *env, jobject obj) {
     jclass cls = (*env)->GetObjectClass(env, obj);
     jfieldID id = (*env)->GetFieldID(env, cls, "kvsp_handle", "J");
     jlong kvsp_handle_jlong = (*env)->GetLongField(env, obj, id);
-    kvsp_handle_t *kvsp_handle = (kvsp_handle_t*)kvsp_handle_jlong;
+    /* doing the cast through tmp silences a compiler warning on 32-bit */
+    intptr_t tmp = (intptr_t)kvsp_handle_jlong;
+    kvsp_handle_t *kvsp_handle = (kvsp_handle_t*)tmp;
     if (kvsp_handle == NULL) {
       kvsp_handle = calloc(1, sizeof(kvsp_handle_t));
       kvsp_handle->set = kv_set_new();
@@ -44,7 +46,7 @@ static unsigned char get_blocking(JNIEnv *env, jobject obj) {
     return blocking;
 }
 
-jint throwFileNotFound(JNIEnv *env, char* message) {
+jint throwIoError(JNIEnv *env, char* message) {
     jclass exClass;
     char *className = "java/io/IOException";
 
@@ -89,23 +91,24 @@ jobject kvs_to_map(JNIEnv* env, void *set) {
 
 JNIEXPORT jobject JNICALL Java_KVJava_read(JNIEnv * env, jobject obj) {
   kvsp_handle_t *h = get_handle(env, obj);
-  jobject ret;
+  jobject ret=NULL;
 
   if (h->spr == NULL) {
     const char *dir = get_dir(env, obj);
     h->spr = kv_spoolreader_new(dir);
     if (h->spr == NULL) {
-      throwFileNotFound(env,"Failed to open spool");
+      throwIoError(env,"Failed to open spool");
       return NULL;
     }
   }
   int blocking = get_blocking(env, obj);
   int rc = kv_spool_read(h->spr, h->set, blocking);
   if (rc < 0) {
-     ret = kvs_to_map(env, h->set);
+      throwIoError(env,"Spool reader error");
   } else if (rc == 0) {
-    // TODO non blocking support
+    // TODO non blocking support. throw something or what?
   } else {
+     ret = kvs_to_map(env, h->set);
   }
   return ret;
 }
@@ -178,7 +181,7 @@ JNIEXPORT void JNICALL Java_KVJava_write(JNIEnv *env, jobject obj, jobject map) 
     const char *dir = get_dir(env, obj);
     h->spw = kv_spoolwriter_new(dir);
     if (h->spw == NULL) {
-      throwFileNotFound(env,"Failed to open spool");
+      throwIoError(env,"Failed to open spool");
       return;
     }
   }
@@ -190,7 +193,9 @@ JNIEXPORT void JNICALL Java_KVJava_close(JNIEnv *env, jobject obj) {
     jclass cls = (*env)->GetObjectClass(env, obj);
     jfieldID kvsp_handle_id = (*env)->GetFieldID(env, cls, "kvsp_handle", "J");
     jlong kvsp_handle_jlong = (*env)->GetLongField(env, obj, kvsp_handle_id);
-    kvsp_handle_t *kvsp_handle = (kvsp_handle_t*)kvsp_handle_jlong;
+    /* doing the cast through tmp silences a compiler warning on 32-bit */
+    intptr_t tmp = (intptr_t)kvsp_handle_jlong;
+    kvsp_handle_t *kvsp_handle = (kvsp_handle_t*)tmp;
 
     if (kvsp_handle == NULL) return;
     if (kvsp_handle->set) kv_set_free(kvsp_handle->set);
