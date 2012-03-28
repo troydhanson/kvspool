@@ -1166,6 +1166,39 @@ kv<span style="color: #990000">.</span><span style="font-weight: bold"><span sty
 </div></div>
 </div>
 <div class="sect2">
+<h3 id="_java">Java</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.3
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">public</span></span> <span style="font-weight: bold"><span style="color: #0000FF">class</span></span> <span style="color: #008080">TestKVJava</span> <span style="color: #FF0000">{</span>
+  <span style="font-weight: bold"><span style="color: #0000FF">static</span></span> <span style="color: #FF0000">{</span>
+     System<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">loadLibrary</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"KVJava"</span><span style="color: #990000">);</span>
+  <span style="color: #FF0000">}</span>
+  <span style="font-weight: bold"><span style="color: #0000FF">public</span></span> <span style="font-weight: bold"><span style="color: #0000FF">static</span></span> <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">main</span></span><span style="color: #990000">(</span><span style="color: #008080">String</span> args<span style="color: #990000">[])</span> <span style="color: #FF0000">{</span>
+    <span style="color: #008080">KVJava</span> kv <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> <span style="font-weight: bold"><span style="color: #000000">KVJava</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
+    <span style="color: #008080">HashMap&lt;String,String&gt;</span> h <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> HashMap<span style="color: #990000">&lt;</span>String<span style="color: #990000">,</span>String<span style="color: #990000">&gt;();</span>
+    h<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">put</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"day"</span><span style="color: #990000">,</span>  <span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">);</span>
+    h<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">put</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"user"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Troy"</span><span style="color: #990000">);</span>
+    kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>h<span style="color: #990000">);</span>
+  <span style="color: #FF0000">}</span>
+<span style="color: #FF0000">}</span></tt></pre></div></div>
+<div class="paragraph"><p>The example loads the JNI library <tt>KVJava</tt>, instantiates an object of that class, and
+passes a <tt>HashMap&lt;String,String&gt;</tt> into its <tt>write</tt> method. The <tt>read</tt> method is similar:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>HashMap&lt;String,String&gt; m;
+m = kv.read();</tt></pre>
+</div></div>
+<div class="paragraph"><div class="title">Building the JNI library</div><p>The Java binding is not yet integrated into the main build, so it requires extra steps to
+build. After building kvspool, <tt>cd kvjava</tt> and run <tt>make</tt>. Most likely you will need to
+edit the <tt>kvjava/Makefile</tt> lines where <tt>JNIINC</tt> and <tt>JNILIB</tt> are defined to make it work.
+The result of compilation is <tt>libKVJava.so</tt> which must be manually copied to your choice
+of library directory such as <tt>/usr/local/lib</tt> (you may also need to set <tt>LD_LIBRARY_PATH</tt>
+so that the dynamic linker can find it).  Finally you can run <tt>make test</tt> to try it.</p></div>
+</div>
+<div class="sect2">
 <h3 id="_c_c">C/C++</h3>
 <div class="paragraph"><p>C programs must be linked with -lkvspool.</p></div>
 <div class="listingblock">
@@ -1246,11 +1279,6 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div class="ulist"><ul>
 <li>
 <p>
-The Java API needs documentation and unit tests.
-</p>
-</li>
-<li>
-<p>
 The C API has some deprecated functions to support binary values
 </p>
 </li>
@@ -1299,7 +1327,7 @@ Use JSON internally
 <div id="footer">
 <div id="footer-text">
 Version 0.6<br />
-Last updated 2012-03-19 00:16:25 EDT
+Last updated 2012-03-27 21:16:08 EDT
 </div>
 </div>
 </body>
