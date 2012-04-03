@@ -106,7 +106,7 @@ JNIEXPORT jobject JNICALL Java_KVJava_read(JNIEnv * env, jobject obj) {
   if (rc < 0) {
       throwIoError(env,"Spool reader error");
   } else if (rc == 0) {
-    // TODO non blocking support. throw something or what?
+    // non blocking mode, but no data available; return null below
   } else {
      ret = kvs_to_map(env, h->set);
   }

@@ -772,8 +772,8 @@ asciidoc.install(2);
 <h1>kvspool: a tool for data streams</h1>
 <span id="author">Troy D. Hanson</span><br />
 <span id="email"><tt>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</tt></span><br />
-<span id="revnumber">version 0.6,</span>
-<span id="revdate">March 2012</span>
+<span id="revnumber">version 0.7,</span>
+<span id="revdate">April 2012</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -828,6 +828,24 @@ http://www.gnu.org/software/src-highlite -->
 <pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
 <span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$kv</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
 <span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$d</span> <span style="color: #990000">=</span> <span style="color: #009900">$kv</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">read</span></span><span style="color: #990000">();</span></tt></pre></div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Why did I write kvspool?</div>
+<div class="paragraph"><p>I wanted a very simple library that only writes to the local file system, so
+applications can link with kvspool and use it without undesirable side effects
+(such as creation of threads, sockets, or incurring blocking operations). I
+wanted fewer, rather than more, features- taking the Unix pipe as a role model.</p></div>
+<div class="paragraph"><p>I also wanted to cater to the needs of my specific application- a never-ending
+event stream consumed by slower processes that might come and go. I didn&#8217;t want
+to fill up the disk if the reader was gone. I also didn&#8217;t want to block the
+writer while waiting for a reader. So kvspool keeps data until the spool is full,
+then deletes the old data to make room for new- regardless of whether its been
+read.  This makes sense when individual events are disposable. Obviously, its
+not for finance, life support, and situations where every event is critical.
+I also wanted rewind and replay- to take a snapshot of a running event stream,
+then be able to work with it offline. I wrote kvspool because I wanted just the
+features that I needed, that fit my use cases, without heavy dependencies.</p></div>
+</div></div>
 <div class="paragraph"><div class="title">Loose coupling</div><p>Because the spooled data goes into the disk, the reader and writer are decoupled. They
 don&#8217;t have to run at the same time. They can come and go.  If the reader exits and
 restarts, it picks up where it left off.</p></div>
@@ -941,7 +959,8 @@ background.</td>
 <div class="sect2">
 <h3 id="_resources_amp_help">Resources &amp; Help</h3>
 <div class="paragraph"><p>News about software updates are posted to the author&#8217;s blog: <a href="http://tkhanson.net/blog">http://tkhanson.net/blog</a>.
-Contact the author directly at <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a> if you have questions or other issues.</p></div>
+Contact the author directly at <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a> if you have questions or other issues.
+Additional software by the author is cataloged at <a href="http://tkhanson.net">http://tkhanson.net</a>.</p></div>
 </div>
 </div>
 </div>
@@ -1147,6 +1166,9 @@ called:</p></div>
 <div class="content">
 <pre><tt>my $h = $v-&gt;read();</tt></pre>
 </div></div>
+<div class="paragraph"><p>The reader is normally blocking (it waits for data if none is immediately available).
+To enact non-blocking mode, use <tt>$v-&gt;{blocking}=0;</tt>, then test the reference returned from
+<tt>read()</tt> using <tt>defined()</tt>. If it&#8217;s not, no data is currently available in the spool.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_python">Python</h3>
@@ -1164,6 +1186,8 @@ kv<span style="color: #990000">.</span><span style="font-weight: bold"><span sty
 <div class="content">
 <pre><tt>d = kv.read()</tt></pre>
 </div></div>
+<div class="paragraph"><p>To enact non-blocking mode on the reader, use <tt>kv.blocking = 0</tt> then test whether the
+object returned from <tt>read()</tt> is <tt>None</tt>. If so, no data is currently available in the spool.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_java">Java</h3>
@@ -1191,6 +1215,9 @@ passes a <tt>HashMap&lt;String,String&gt;</tt> into its <tt>write</tt> method. T
 <pre><tt>HashMap&lt;String,String&gt; m;
 m = kv.read();</tt></pre>
 </div></div>
+<div class="paragraph"><p>You can put the reader in non-blocking mode by setting <tt>kv.blocking = false;</tt>
+and then test whether the object returned from <tt>read()</tt> is equal to <tt>null</tt>. If so,
+no data is currently available in the spool.</p></div>
 <div class="paragraph"><div class="title">Building the JNI library</div><p>The Java binding is not yet integrated into the main build, so it requires extra steps to
 build. After building kvspool, <tt>cd kvjava</tt> and run <tt>make</tt>. Most likely you will need to
 edit the <tt>kvjava/Makefile</tt> lines where <tt>JNIINC</tt> and <tt>JNILIB</tt> are defined to make it work.
@@ -1240,8 +1267,9 @@ http://www.gnu.org/software/src-highlite -->
 <span style="font-weight: bold"><span style="color: #000000">kv_spool_read</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">);</span></tt></pre></div></div>
 <div class="paragraph"><p>The final argument to <tt>kv_spool_read</tt> specifies whether it should block if there is no
 data ready in the spool. A positive return value means success (data was read from the
-spool and it&#8217;s been populated into the set).  A C program can iterate through all the
-key-value pairs in the set like this:</p></div>
+spool and it&#8217;s been populated into the set).  A zero value means that non-blocking mode
+was used, but no data is currently available in the spool.</p></div>
+<div class="paragraph"><p>A C program can iterate through all the key-value pairs in the result set like this:</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.3
 by Lorenzo Bettini
@@ -1252,7 +1280,7 @@ http://www.gnu.org/software/src-highlite -->
   <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"key is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>key<span style="color: #990000">);</span>
   <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"value is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>val<span style="color: #990000">);</span>
 <span style="color: #FF0000">}</span></tt></pre></div></div>
-<div class="paragraph"><p>You can also fetch a particular key-value pair from the set using <tt>kv_get</tt> and providing
+<div class="paragraph"><p>You can also fetch a particular key-value pair from the set using <tt>kv_get</tt>, providing
 the key as the final argument:</p></div>
 <div class="literalblock">
 <div class="content">
@@ -1279,16 +1307,6 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div class="ulist"><ul>
 <li>
 <p>
-The C API has some deprecated functions to support binary values
-</p>
-</li>
-<li>
-<p>
-It&#8217;s only been tested with Ubuntu 10.04
-</p>
-</li>
-<li>
-<p>
 Autoconf detection for Perl, Python, Java should be improved
 </p>
 </li>
@@ -1299,12 +1317,17 @@ Test suite is minimal, although kvspool has extensive production use
 </li>
 <li>
 <p>
+It&#8217;s only been tested with Ubuntu 10.04
+</p>
+</li>
+<li>
+<p>
 Support multi-writer, multi-reader (see doc/future.txt)
 </p>
 </li>
 <li>
 <p>
-Replace segemented data files with one memory mapped, circular file
+Replace segmented data files with one memory mapped, circular file
 </p>
 </li>
 <li>
@@ -1318,7 +1341,7 @@ Use JSON internally
 <div class="sect1">
 <h2 id="_acknowledgments">Acknowledgments</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Special thanks to Trevor Adams for writing the Perl and Java bindings and to
+<div class="paragraph"><p>Thanks to Trevor Adams for writing the original Perl and Java bindings and to
 <a href="http://jhuapl.edu/ott">JHU/APL OTT</a> for their support.</p></div>
 </div>
 </div>
@@ -1326,8 +1349,8 @@ Use JSON internally
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 0.6<br />
-Last updated 2012-03-27 21:16:08 EDT
+Version 0.7<br />
+Last updated 2012-04-03 00:01:17 EDT
 </div>
 </div>
 </body>

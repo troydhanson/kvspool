@@ -35,7 +35,15 @@ public class TestKVJava {
     HashMap<String,String> m;
     m = kv.read();
     printMap(m);
+
+    /* test non blocking mode */
+    kv.blocking = false;
     m = kv.read();
-    printMap(m);
+    if (m != null) printMap(m);
+    else System.out.println("non-blocking read: no data");
+
+    m = kv.read();
+    if (m != null) printMap(m);
+    else System.out.println("non-blocking read: no data");
   }
 }

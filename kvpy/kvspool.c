@@ -19,9 +19,6 @@
  */
 
 /* TODO
- *  - add non-blocking mode flag (S:i) in Kvspool_init arg parsing 
- *  - in non-blocking mode, don't throw an error on no-data, return None ?
- *  - in non-blocking mode, allow kv.blocking to be read-write (now readonly)
  *  - add tostr so that kvspool object can be printed (include r or w mode)
  *  - add support for python sequence protocol in reader mode, c.f.:
  *     http://docs.python.org/extending/newtypes.html#abstract-protocol-support
@@ -90,7 +87,7 @@ Kvspool_init(Kvspool *self, PyObject *args, PyObject *kwds)
 /* here's how we expose certain instance variables to python (e.g. kv.dir) */
 static PyMemberDef Kvspool_members[] = {
   {"dir", T_OBJECT_EX, offsetof(Kvspool, dir), READONLY, "spool directory"},
-  {"blocking", T_INT, offsetof(Kvspool, blocking), READONLY, "mode"},
+  {"blocking", T_INT, offsetof(Kvspool, blocking), 0, "mode"},
   {NULL}
 };
 
@@ -150,28 +147,12 @@ static int kvs_to_dictionary(PyObject **_dict, void *set) {
     while ( (kv= kv_next(set,kv))) {
 
       pk = Py_BuildValue("s#",kv->key,(int)kv->klen);
-      switch(kv->fmt) {
-        case 'c': pv = Py_BuildValue("b",*(char*)kv->val); break;
-        case 'm': pv = Py_BuildValue("h",*( int16_t*)kv->val); break;
-        case 'n': pv = Py_BuildValue("H",*(uint16_t*)kv->val); break;
-        case 'd': pv = Py_BuildValue("i",*( int32_t*)kv->val); break;
-        case 'u': pv = Py_BuildValue("I",*(uint32_t*)kv->val); break;
-        case 'D': pv = Py_BuildValue("l",*( int64_t*)kv->val); break;
-        case 'U': pv = Py_BuildValue("L",*(uint64_t*)kv->val); break;
-        case 'b': pv = Py_BuildValue("z#",kv->val,(int)kv->vlen); break;
-        case 's': pv = Py_BuildValue("s#",kv->val,(int)kv->vlen); break;
-        case 'f': pv = Py_BuildValue("d",*(double*)kv->val); break;
-        default: 
-          PyErr_SetString(PyExc_RuntimeError, "unsupported type in spool");
-          rc = -1;
-          goto done;
-      }
+      pv = Py_BuildValue("s#",kv->val,(int)kv->vlen);
       rc = PyDict_SetItem(dict,pk,pv);
       Py_DECREF(pk); Py_DECREF(pv);
       if (rc == -1) break;
     }
 
-   done:
     if (rc == -1) {
       Py_DECREF(dict);
       dict = NULL;
@@ -187,7 +168,6 @@ static PyObject *
 Kvspool_read(Kvspool *self, PyObject *args) 
 {
   PyObject *dict = NULL;
-  int block=1;
   char *dir;
   int rc;
 
@@ -202,11 +182,11 @@ Kvspool_read(Kvspool *self, PyObject *args)
   }
 
   /* try to read a spool frame. */
-  if ( (rc = kv_spool_read(self->spr, self->set, block)) > 0) {
+  if ( (rc = kv_spool_read(self->spr, self->set, self->blocking)) > 0) {
     kvs_to_dictionary(&dict, self->set);
   } else if (rc == 0) {
     /* only happens in non-blocking mode when no data is available */
-    PyErr_SetString(PyExc_RuntimeError, "no data available");
+    dict = Py_BuildValue("");  // builds "None" in Python
   } else if (rc < 0) {
     PyErr_SetString(PyExc_RuntimeError, "internal error");
   }

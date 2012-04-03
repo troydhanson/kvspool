@@ -355,19 +355,17 @@ int kv_spool_write(void*_sp, void *_set) {
   kvset_t *set = (kvset_t*)_set;
   tpl_node *tn = NULL;
   char *buf=NULL; 
-  char *key, fmt;
+  char *key, *val;
   size_t len;
   uint32_t len32;
-  tpl_bin v;
   int rc=-1;
 
   /* generate frame */
-  tn = tpl_map("A(scB)", &key, &fmt, &v);
+  tn = tpl_map("A(ss)", &key, &val);
   kv_t *kv = NULL;
   while ( (kv = kv_next(set, kv))) {
     key = kv->key;
-    fmt = kv->fmt;
-    v.sz = kv->vlen; v.addr = kv->val;
+    val = kv->val;
     tpl_pack(tn,1);
   }
 

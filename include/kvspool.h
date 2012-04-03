@@ -12,7 +12,6 @@
 typedef struct {
   char *key;
   int klen;
-  char fmt; /* format of the value; s/i/... */
   char *val;
   int vlen;
   UT_hash_handle hh; /* internal */
@@ -28,7 +27,6 @@ void kv_set_free(void*);
 void kv_set_clear(void*);
 void kv_set_dump(void *set,FILE *out);
 void kv_add(void*set, const char *key, int klen, const char *val, int vlen);
-void kv_addt(void*set, const char *key, char fmt, const void *val, int vlen);
 kv_t *kv_get(void*set, char *key);
 #define kv_adds(set, key, val) kv_add(set,key,strlen(key),val,strlen(val))
 int kv_len(void*set);

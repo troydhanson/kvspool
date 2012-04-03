@@ -160,20 +160,19 @@ static int update_rpos(kv_spoolr_t *sp, kv_spoolrec_t *r, size_t sz) {
 static void fill_set(void *img, size_t sz, kv_spoolr_t *sp, kvset_t *set) {
   tpl_node *tn;
   char *key;
-  char fmt;
-  tpl_bin vb;
+  char *val;
 
   kv_set_clear(set);
 
-  tn = tpl_map("A(scB)", &key, &fmt, &vb);
+  tn = tpl_map("A(ss)", &key, &val);
   if (tpl_load(tn, TPL_MEM, img, sz) == -1) {
     fprintf(stderr, "tpl_load failed (sz %d)\n", (int)sz);
     return;
   }
   while( tpl_unpack(tn,1) > 0 ) {
-    kv_addt(set, key, fmt, vb.addr, vb.sz);
+    kv_adds(set, key, val);
     free(key);
-    free(vb.addr);
+    free(val);
   }
   tpl_free(tn);
   set->img = img;
@@ -236,7 +235,8 @@ static int wait_for_event(kv_spoolr_t *sp) {
   struct timeval timeout = {.tv_sec = INTERNAL_RESCAN_INTERVAL_SEC, .tv_usec=0};
   if (select(ifd+1, &inotify_fdset, NULL, NULL, &timeout) == -1) {
     fprintf(stderr,"select error: %s\n",strerror(errno)); 
-    if (errno != EINTR) goto done;
+    //if (errno != EINTR) goto done;
+    goto done;
   }
   rc=0;
 

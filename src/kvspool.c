@@ -39,20 +39,7 @@ void kv_set_dump(void*_set,FILE *out) {
   kv=NULL;
   while ( (kv=kv_next(set,kv))) {
     fprintf(out," %.*s: ", kv->klen, kv->key);
-    switch(kv->fmt) {
-      case 'c': fprintf(out,"%x",(uint32_t)(*(uint8_t*)kv->val)); break;
-      case 's': fprintf(out,"%s", (char*)kv->val); break;
-      case 'u': fprintf(out,"%u",*(uint32_t*)kv->val); break;
-      case 'd': fprintf(out,"%d",*( int32_t*)kv->val); break;
-      case 'b': fprintf(out,"(buffer of length %u)",kv->vlen); break;
-      case 'n': fprintf(out,"%u",(uint32_t)(*(uint16_t*)kv->val)); break;
-      case 'm': fprintf(out,"%d",( int32_t)(*( int16_t*)kv->val)); break;
-      case 'U': fprintf(out,"%lu",*(long*)kv->val); break;
-      case 'D': fprintf(out,"%ld",*(long*)kv->val); break;
-      case 'f': fprintf(out,"%f",*( double*)kv->val); break;
-      default:  fprintf(out,"unknown format conversion '%c'", kv->fmt); break;
-    }
-    fprintf(out,"\n");
+    fprintf(out, "%.*s\n", kv->vlen, kv->val);
   }
 }
 
@@ -80,7 +67,7 @@ kv_t *kv_get(void*_set, char *key) {
   return kv;
 }
 
-void _kv_add(void*_set, const char *key, int klen, char fmt, const char *val, int vlen) {
+void kv_add(void*_set, const char *key, int klen, const char *val, int vlen) {
   kvset_t *set = (kvset_t*)_set;
   assert(klen); //assert(vlen);
   kv_t *kv;
@@ -91,7 +78,6 @@ void _kv_add(void*_set, const char *key, int klen, char fmt, const char *val, in
     free(kv->val);
     if ( (kv->val = malloc(vlen+1)) == NULL) sp_oom(); kv->vlen = vlen;
     memcpy(kv->val, val, vlen); kv->val[vlen]='\0';
-    kv->fmt = fmt;
     return;
   }
   /* new key. deep copy the key/val and add it, null term for convenience */
@@ -100,17 +86,7 @@ void _kv_add(void*_set, const char *key, int klen, char fmt, const char *val, in
   if ( (kv->val = malloc(vlen+1)) == NULL) sp_oom(); kv->vlen = vlen;
   memcpy(kv->key, key, klen); kv->key[klen]='\0';
   memcpy(kv->val, val, vlen); kv->val[vlen]='\0';
-  kv->fmt = fmt;
   HASH_ADD_KEYPTR(hh,set->kvs,kv->key,kv->klen,kv);
-}
-
-/* addt: the preferred way to add to a set. key is string, format is explicit */
-void kv_addt(void*_set, const char *key, char fmt, const void *val, int vlen) {
-  _kv_add(_set, key, strlen(key), fmt, val, vlen);
-}
-
-void kv_add(void*_set, const char *key, int klen, const char *val, int vlen) {
-  _kv_add(_set, key, klen, 's', val, vlen);
 }
 
 int kv_len(void*_set) {

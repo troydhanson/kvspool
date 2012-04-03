@@ -1,7 +1,7 @@
 kvspool: a tool for data streams
 ================================
 Troy D. Hanson <tdh@tkhanson.net>
-v0.6, March 2012
+v0.7, April 2012
 
 kv-spool ("key-value" spool):: 
          a Linux-based C library, with Perl, Python and Java bindings, to stream data
@@ -35,6 +35,25 @@ Here's a sneak peak at a really simple writer and reader:
  use KVSpool;        
  my $kv = KVSpool->new("spool");
  my $d = $kv->read(); 
+
+.Why did I write kvspool?
+*******************************************************************************
+I wanted a very simple library that only writes to the local file system, so 
+applications can link with kvspool and use it without undesirable side effects 
+(such as creation of threads, sockets, or incurring blocking operations). I 
+wanted fewer, rather than more, features- taking the Unix pipe as a role model.
+
+I also wanted to cater to the needs of my specific application- a never-ending
+event stream consumed by slower processes that might come and go. I didn't want 
+to fill up the disk if the reader was gone. I also didn't want to block the 
+writer while waiting for a reader. So kvspool keeps data until the spool is full,
+then deletes the old data to make room for new- regardless of whether its been 
+read.  This makes sense when individual events are disposable. Obviously, its 
+not for finance, life support, and situations where every event is critical. 
+I also wanted rewind and replay- to take a snapshot of a running event stream, 
+then be able to work with it offline. I wrote kvspool because I wanted just the 
+features that I needed, that fit my use cases, without heavy dependencies.
+*******************************************************************************
 
 .Loose coupling
 Because the spooled data goes into the disk, the reader and writer are decoupled. They
@@ -142,6 +161,7 @@ Resources & Help
 ~~~~~~~~~~~~~~~~
 News about software updates are posted to the author's blog: http://tkhanson.net/blog.
 Contact the author directly at tdh@tkhanson.net if you have questions or other issues.
+Additional software by the author is cataloged at http://tkhanson.net.  
 
 Getting kvspool
 ---------------
@@ -278,6 +298,10 @@ called:
 
   my $h = $v->read();
 
+The reader is normally blocking (it waits for data if none is immediately available). 
+To enact non-blocking mode, use `$v->{blocking}=0;`, then test the reference returned from
+`read()` using `defined()`. If it's not, no data is currently available in the spool.
+
 Python
 ~~~~~~
 [source,python]
@@ -289,6 +313,9 @@ Python
 The `write` method takes a dictionary, while the `read` method returns a dictionary:
 
   d = kv.read()
+
+To enact non-blocking mode on the reader, use `kv.blocking = 0` then test whether the
+object returned from `read()` is `None`. If so, no data is currently available in the spool.
 
 Java
 ~~~~
@@ -311,6 +338,10 @@ passes a `HashMap<String,String>` into its `write` method. The `read` method is 
 
     HashMap<String,String> m;
     m = kv.read();
+
+You can put the reader in non-blocking mode by setting `kv.blocking = false;`
+and then test whether the object returned from `read()` is equal to `null`. If so, 
+no data is currently available in the spool.
 
 .Building the JNI library
 The Java binding is not yet integrated into the main build, so it requires extra steps to
@@ -360,8 +391,10 @@ returns an opaque handle to the spool.  Then call `kv_spool_read` to read the sp
 
 The final argument to `kv_spool_read` specifies whether it should block if there is no
 data ready in the spool. A positive return value means success (data was read from the
-spool and it's been populated into the set).  A C program can iterate through all the
-key-value pairs in the set like this:
+spool and it's been populated into the set).  A zero value means that non-blocking mode
+was used, but no data is currently available in the spool. 
+
+A C program can iterate through all the key-value pairs in the result set like this:
 
 [source,c]
   kv_t *kv = NULL;
@@ -370,7 +403,7 @@ key-value pairs in the set like this:
     printf("value is %s\n", kv->val);
   }
 
-You can also fetch a particular key-value pair from the set using `kv_get` and providing
+You can also fetch a particular key-value pair from the set using `kv_get`, providing
 the key as the final argument:
 
  kv_t *kv = kv_get(set, "user");
@@ -388,17 +421,16 @@ Roadmap
 -------
 Kvspool is a young library and has some rough edges and room for improvement.
 
-* The C API has some deprecated functions to support binary values 
-* It's only been tested with Ubuntu 10.04
 * Autoconf detection for Perl, Python, Java should be improved
 * Test suite is minimal, although kvspool has extensive production use
+* It's only been tested with Ubuntu 10.04
 * Support multi-writer, multi-reader (see doc/future.txt)
-* Replace segemented data files with one memory mapped, circular file
+* Replace segmented data files with one memory mapped, circular file
 * Use JSON internally
 
 Acknowledgments
 ---------------
-Special thanks to Trevor Adams for writing the Perl and Java bindings and to
+Thanks to Trevor Adams for writing the original Perl and Java bindings and to
 http://jhuapl.edu/ott[JHU/APL OTT] for their support.
 
 // vim: set tw=90 wm=2 syntax=asciidoc: 

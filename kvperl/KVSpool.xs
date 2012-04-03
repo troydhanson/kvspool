@@ -57,6 +57,22 @@ MODULE = KVSpool		PACKAGE = KVSpool
 INCLUDE: const-xs.inc
 
 
+SV*
+makeset()
+PREINIT:
+void *set;
+CODE:
+
+    set = kv_set_new();
+    if ( set == NULL) {
+      croak("cannot initialize set");
+    }
+    SV*  pv = newSViv(PTR2IV(set));
+    RETVAL = pv;
+OUTPUT:
+    RETVAL
+
+
 
 SV*
 makersp(char * dir)
@@ -94,6 +110,15 @@ CODE:
 OUTPUT:
     RETVAL
 
+void 
+freeset(IV pos)
+INIT:
+    void *set;
+CODE:
+    set = INT2PTR(void*,pos);
+    kv_set_free(set);
+
+
 
 void 
 freersp(IV pos)
@@ -115,26 +140,21 @@ CODE:
 
 
 HV*
-kvread(IV pos,int block)
+kvread(IV pos,void *set, int block)
 INIT:
-    void *set,*sp;
+    void *sp;
     HV *hash = NULL;
     int rc =0;
     SV** val;
 CODE:
     sp = INT2PTR(void*,pos);
     
-    set = kv_set_new();
     if ( (rc=kv_spool_read(sp,set,block)) > 0) {
       kvs_to_hash(&hash, set);
-      kv_set_free(set);
       RETVAL = hash;
-    } else if (rc == 0) {
-      kv_set_free(set);
-      RETVAL = newHV();
-      //croak("no frames available");
+    } else if (rc == 0) {  /* non blocking read, no data available */
+      XSRETURN_UNDEF;
     } else if (rc < 0) {
-      kv_set_free(set);
       croak("internal error in spool reader");
     }
 OUTPUT:
@@ -142,70 +162,15 @@ OUTPUT:
     
 
 void
-kvwrite(IV pos, HV* hash)
+kvwrite(IV pos, void *set, HV* hash)
 INIT:
-    void *sp, *set;
+    void *sp;
 CODE:
     sp = INT2PTR(void*,pos);
-    set = kv_set_new();
-    if (hash_to_kvs(hash, set) == -1) {
-      kv_set_free(set);
-      croak("non-string key or value");
-    }
-    kv_spool_write(sp,set);
-    kv_set_free(set);
-
-HV*
-kv_read(char * dir, int block)
-PREINIT:
-void *sp,*set;
-HV *hash = NULL;
-int rc = 0;
-CODE:
-    block = block ? 1 : 0;
-
-    if ( (sp = kv_spoolreader_new(dir)) == NULL) {
-      croak("cannot initialize spool reader");
-      RETVAL = NULL;
-    }
-
-    set = kv_set_new();
-    if ( (rc=kv_spool_read(sp,set,block)) > 0) {
-      kvs_to_hash(&hash, set);
-      RETVAL = hash;
-    } else if (rc == 0) {
-      kv_set_free(set);
-      kv_spoolreader_free(sp);
-      RETVAL = (HV*)sv_2mortal((SV*)newHV());
-      croak("no frames available");
-    } else if (rc < 0) {
-      kv_set_free(set);
-      kv_spoolreader_free(sp);
-      croak("internal error in spool reader");
-    }
-    kv_set_free(set);
-    kv_spoolreader_free(sp);
-OUTPUT:
-   RETVAL
-
-void
-kv_write(char * dir, HV* hash)
-INIT:
-    void *sp, *set;
-CODE:
-
-    /* try to write a spool frame */
-    if ( (sp = kv_spoolwriter_new(dir)) == NULL) {
-      croak("cannot initialize spool writer");
-    }
-
-    set = kv_set_new();
     if (hash_to_kvs(hash, set) == -1) {
       croak("non-string key or value");
     }
     kv_spool_write(sp,set);
-    kv_set_free(set);
-    kv_spoolwriter_free(sp);
 
 
 
