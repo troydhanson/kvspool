@@ -1,8 +1,8 @@
 all: KVJava.class libKVJava.so
 #CFLAGS = -g -O0
 JNIINC=/usr/lib/jvm/java-6-openjdk/include/
-JNILIB=/usr/lib/jvm/java-6-openjdk/jre/lib/i386/
-#JNILIB=/usr/lib/jvm/java-6-openjdk/jre/lib/amd64/
+#JNILIB=/usr/lib/jvm/java-6-openjdk/jre/lib/i386/
+JNILIB=/usr/lib/jvm/java-6-openjdk/jre/lib/amd64/
 
 KVJava.class: KVJava.java
 	javac $<
