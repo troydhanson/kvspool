@@ -321,9 +321,6 @@ Java
 ~~~~
 [source,java]
   public class TestKVJava {
-    static {
-       System.loadLibrary("KVJava");
-    }
     public static void main(String args[]) {
       KVJava kv = new KVJava("spool");
       HashMap<String,String> h = new HashMap<String,String>();
@@ -333,8 +330,12 @@ Java
     }
   }
 
-The example loads the JNI library `KVJava`, instantiates an object of that class, and
-passes a `HashMap<String,String>` into its `write` method. The `read` method is similar:
+The example first instantiates a `KVJava` object. (You can copy `KVJava.java` from the
+`kvjava` directory into your own source tree; this class loads the underlying JNI-based
+library, which must be built and installed as described below). 
+
+To write to the spool, pass a `HashMap<String,String>` to the `write` method. The `read`
+method is similar:
 
     HashMap<String,String> m;
     m = kv.read();
@@ -343,13 +344,16 @@ You can put the reader in non-blocking mode by setting `kv.blocking = false;`
 and then test whether the object returned from `read()` is equal to `null`. If so, 
 no data is currently available in the spool.
 
+// sudo apt-get install default-jdk 
+
 .Building the JNI library
 The Java binding is not yet integrated into the main build, so it requires extra steps to
 build. After building kvspool, `cd kvjava` and run `make`. Most likely you will need to 
 edit the `kvjava/Makefile` lines where `JNIINC` and `JNILIB` are defined to make it work.
 The result of compilation is `libKVJava.so` which must be manually copied to your choice
-of library directory such as `/usr/local/lib` (you may also need to set `LD_LIBRARY_PATH`
-so that the dynamic linker can find it).  Finally you can run `make test` to try it.
+of library directory such as `/usr/local/lib` (You may also need to set `LD_LIBRARY_PATH`
+so that the dynamic linker can find this shared library it at runtime). 
+
  
 C/C++
 ~~~~~

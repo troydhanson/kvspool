@@ -3,9 +3,6 @@ import java.util.Map;
 import java.lang.String;
 
 public class TestKVJava {
-  static {
-     System.loadLibrary("KVJava");
-  }
 
   private static void printMap(HashMap<String,String> m) {
     for (Map.Entry<String, String> entry : m.entrySet()) {
