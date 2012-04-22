@@ -1022,7 +1022,11 @@ cellspacing="0" cellpadding="4">
 </tr>
 <tr>
 <td align="left" valign="top"><p class="table"><tt>kvsp-tee</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-tee -s spool-in spool-copy1 spool-copy2</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-tee -s spool copy1 copy2</tt></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><tt>kvsp-concen</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-concen -d spool1 -d spool2 spool</tt></p></td>
 </tr>
 </tbody>
 </table>
@@ -1039,6 +1043,9 @@ spool directory for each reader (and use <tt>kvsp-init</tt> to set the capacity 
 then use <tt>kvsp-tee</tt> as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
 maintain the tee.</p></div>
+<div class="paragraph"><p>The <tt>kvsp-concen</tt> utility is the opposite of <tt>kvsp-tee</tt>. It takes multiple source
+spools and makes a single output spool from them. It is a spool concentrator. The
+source spools are flagged with <tt>-d spool</tt> and the final argument is the output spool.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_network_utilities">Network utilities</h3>
@@ -1330,11 +1337,6 @@ Support multi-writer, multi-reader (see doc/future.txt)
 Replace segmented data files with one memory mapped, circular file
 </p>
 </li>
-<li>
-<p>
-Use JSON internally
-</p>
-</li>
 </ul></div>
 </div>
 </div>
@@ -1350,7 +1352,7 @@ Use JSON internally
 <div id="footer">
 <div id="footer-text">
 Version 0.7<br />
-Last updated 2012-04-18 01:53:03 EDT
+Last updated 2012-04-22 12:21:05 EDT
 </div>
 </div>
 </body>

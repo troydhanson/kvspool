@@ -14,12 +14,14 @@ kvsp_mod_LDADD = $(LIBSPOOL)
 kvsp_rewind_LDADD = $(LIBSPOOL)
 kvsp_pub_LDADD = $(LIBSPOOL)
 kvsp_sub_LDADD = $(LIBSPOOL)
+kvsp_concen_LDADD = $(LIBSPOOL)
 
 if HAVE_ZEROMQ
 if HAVE_JANSSON
-bin_PROGRAMS += kvsp-sub kvsp-pub 
+bin_PROGRAMS += kvsp-sub kvsp-pub kvsp-concen
 kvsp_pub_LDADD += -lzmq -ljansson
 kvsp_sub_LDADD += -lzmq -ljansson
+kvsp_concen_LDADD += -lzmq -ljansson
 endif
 endif
 
@@ -34,3 +36,4 @@ kvsp_mod_DEPENDENCIES = ../src/libkvspool.a
 kvsp_rewind_DEPENDENCIES = ../src/libkvspool.a
 kvsp_sub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_pub_DEPENDENCIES = ../src/libkvspool.a
+kvsp_concen_DEPENDENCIES = ../src/libkvspool.a
