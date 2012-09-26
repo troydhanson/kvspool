@@ -367,6 +367,7 @@ int kv_stat(const char *dir, kv_stat_t *stats) {
 
   UT_array *files; utarray_new(files, &ut_str_icd);
   if (sp_readdir(dir, ".sr", files) == -1) goto done;
+  memset(stats, 0, sizeof(*stats));
 
   f = NULL;
   while ( (f=(char**)utarray_next(files,f))) {
@@ -375,10 +376,16 @@ int kv_stat(const char *dir, kv_stat_t *stats) {
     /* get size consumed (sz) and total spool size (spsz) for current sp/sr */
     if ( (fd=open(file,O_RDONLY)) == -1) continue;
     rr = read(fd,&sz,sizeof(sz)); close(fd); if (rr != sizeof(sz)) continue;
-    file[strlen(file)-1]='p'; spsz = (stat(file,&sb) == -1) ? 0 : sb.st_size;
+    file[strlen(file)-1]='p';
+    spsz = 0;
+    if (stat(file,&sb) != -1)  {
+      spsz = sb.st_size;
+      if (sb.st_mtime > stats->last_write) stats->last_write = sb.st_mtime;
+    }
     if (spsz>=8) {spsz-=8; sz-=8;} else continue; /* ignore spool preamble */
     gsz += sz; gspsz += spsz;
   }
+  stats->spool_sz = gspsz;
   stats->pct_consumed = gspsz ? (int)(gsz * 100.0 / gspsz) : 100;
   rc = 0;  /* success */
 

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,28 +11,23 @@
 #include "kvspool.h"
 #include "kvspool_internal.h"
 #include "utarray.h"
+#include "utstring.h"
+
+int verbose;
 
 void usage(char *prog) {
   fprintf(stderr, "usage: %s [-v] spool\n", prog);
   exit(-1);
 }
- 
-int main(int argc, char * argv[]) {
-  int opt,verbose=0,fd=-1,sc,i;
-  char *dir=NULL, **f, *file;
+
+void dir_status(char*dir) {
+  int fd=-1,sc,i;
+  char **f, *file;
+  time_t now, elapsed;
   UT_array *files;
   utarray_new(files,&ut_str_icd);
   struct stat sb;
   uint32_t sz, spsz;
-
-  while ( (opt = getopt(argc, argv, "v+")) != -1) {
-    switch (opt) {
-      case 'v': verbose++; break;
-      default: usage(argv[0]); break;
-    }
-  }
-  if (optind >= argc) usage(argv[0]);
-  dir = argv[optind++];
 
   kv_stat_t stats;
   sc = kv_stat(dir,&stats);
@@ -39,7 +35,28 @@ int main(int argc, char * argv[]) {
     printf("kv_stat error in %s\n", dir);
     goto done; 
   }
-  printf("%3u%%\n", stats.pct_consumed);
+  UT_string *s;
+  utstring_new(s);
+  utstring_printf(s,"%3u%% ", stats.pct_consumed);
+  long lz = stats.spool_sz;
+  char *unit = "";
+  if      (lz > 1024*1024*1024){unit="gb "; lz/=(1024*1024*1024); }
+  else if (lz > 1024*1024)     {unit="mb "; lz/=(1024*1024);      }
+  else if (lz > 1024)          {unit="kb "; lz/=(1024);           }
+  else                         {unit="b ";                        }
+  utstring_printf(s,"%10lu%s", (long)lz, unit);
+
+  unit="";
+  now = time(NULL);
+  elapsed =  now - stats.last_write;
+  if      (elapsed > 60*60*24) {unit="days";  elapsed/=(60*60*24);}
+  else if (elapsed > 60*60)    {unit="hours"; elapsed/=(60*60);   }
+  else if (elapsed > 60)       {unit="mins";  elapsed/=(60);      }
+  else if (elapsed >= 0)       {unit="secs";                      }
+  if (stats.last_write == 0)   utstring_printf(s,"%10snever","");
+  else utstring_printf(s,"%10lu%s", (long)elapsed, unit);
+  printf("%s\n", utstring_body(s));
+  utstring_free(s);
 
   /* the rest is for verbose output */
   if (!verbose) goto done;
@@ -48,7 +65,7 @@ int main(int argc, char * argv[]) {
   f = NULL;
   while ( (f=(char**)utarray_next(files,f))) {
     file = *f;
-    printf("%s ",file);
+    printf("\t%s ",file);
     if ( (fd=open(file,O_RDONLY)) == -1) {
       perror("cannot open");
       goto done;
@@ -70,6 +87,26 @@ int main(int argc, char * argv[]) {
 
  done:
   utarray_free(files);
+}
+ 
+int main(int argc, char * argv[]) {
+  char *dir;
+  int opt;
+
+  while ( (opt = getopt(argc, argv, "v+")) != -1) {
+    switch (opt) {
+      case 'v': verbose++; break;
+      default: usage(argv[0]); break;
+    }
+  }
+  if (optind >= argc) usage(argv[0]);
+
+  while(optind < argc) {
+    dir = argv[optind++];
+    printf("%-20s ", dir);
+    dir_status(dir);
+  }
+
   return 0;
 }
 

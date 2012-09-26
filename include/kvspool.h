@@ -47,7 +47,7 @@ void sp_attrition(char *dir);
 /******************************************************************************
  * special purpose API 
  *****************************************************************************/
-typedef struct { int pct_consumed; } kv_stat_t;
+typedef struct { int pct_consumed; time_t last_write; off_t spool_sz;} kv_stat_t;
 int kv_stat(const char *dir, kv_stat_t *stats);
 void sp_rewind(const char *dir);
 
