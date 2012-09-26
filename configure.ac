@@ -27,7 +27,9 @@ AX_PYTHON_DEVEL(>= '2.4')
 AM_CONDITIONAL(HAVE_PYTHON,test "x$pythonexists" = "xyes") 
 
 AC_CHECK_PROG(PERL,perl,perl)
-AM_CONDITIONAL(HAVE_PERL,test "x$PERL" != "x") 
+AX_PROG_PERL_VERSION([5.10.1],
+  AM_CONDITIONAL(HAVE_PERL,test "x$PERL" != "x"),
+  AM_CONDITIONAL(HAVE_PERL,false))
 
 AC_CONFIG_FILES(Makefile src/Makefile utils/Makefile)
 AC_OUTPUT
