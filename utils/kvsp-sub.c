@@ -15,14 +15,13 @@ void *sp;
 int verbose;
 int pull_mode;
 char *dir;
-char *pub;
 
 void *context;
 void *socket;
 
 
 void usage(char *exe) {
-  fprintf(stderr,"usage: %s [-v] [-s] -d <dir> <pub>\n", exe);
+  fprintf(stderr,"usage: %s [-v] [-s] -d <dir> <pub> [<pub> ...]\n", exe);
   fprintf(stderr,"       -s runs in push-pull mode instead of lossy pub-sub\n");
   exit(-1);
 }
@@ -64,7 +63,7 @@ int json_to_frame(void *sp, void *set, void *msg_data, size_t msg_len) {
 int main(int argc, char *argv[]) {
 
   zmq_rcvmore_t more; size_t more_sz = sizeof(more);
-  char *exe = argv[0], *filter = "";
+  char *exe = argv[0], *filter = "", *pub;
   int part_num,opt,rc=-1;
   void *msg_data, *sp, *set=NULL;
   size_t msg_len;
@@ -78,16 +77,20 @@ int main(int argc, char *argv[]) {
       default: usage(exe); break;
     }
   }
-  if (optind < argc) pub=argv[optind++];
   if (!dir) usage(exe);
-  if (!pub) usage(exe);
+  if (optind >= argc) usage(exe);
+
   sp = kv_spoolwriter_new(dir);
   if (!sp) usage(exe);
   set = kv_set_new();
 
+  /* connect socket to each publisher. yes, zeromq lets you connect n times */
   if ( !(context = zmq_init(1))) goto done;
   if ( !(socket = zmq_socket(context, pull_mode?ZMQ_PULL:ZMQ_SUB))) goto done;
-  if (zmq_connect(socket, pub)) goto done;
+  while (optind < argc) {
+    pub = argv[optind++];
+    if (zmq_connect(socket, pub)) goto done;
+  }
   if (!pull_mode) {
     if (zmq_setsockopt(socket, ZMQ_SUBSCRIBE, filter, strlen(filter))) goto done;
   }

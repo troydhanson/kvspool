@@ -772,8 +772,8 @@ asciidoc.install(2);
 <h1>kvspool: a tool for data streams</h1>
 <span id="author">Troy D. Hanson</span><br />
 <span id="email"><tt>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</tt></span><br />
-<span id="revnumber">version 0.7,</span>
-<span id="revdate">April 2012</span>
+<span id="revnumber">version 0.8,</span>
+<span id="revdate">September 2012</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -799,12 +799,13 @@ kv-spool ("key-value" spool)
 <div class="sect1">
 <h2 id="_kvspool_8217_s_niche">kvspool&#8217;s niche</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message-passing
-library. Its "unit of data" is the <strong>dictionary</strong>. (Or so Python calls it). Perl calls it a
-hash. It&#8217;s a set of key-value pairs.</p></div>
-<div class="paragraph"><p>To use kvspool, two programs open the same spool (which is just a directory). The writer
-puts dictionaries into the spool.  The reader gets dictionaries from the spool, blocking
-when it&#8217;s caught up.  Like this,</p></div>
+<div class="paragraph"><p>Kvspool is a tiny API to stream dictionaries between programs.  The dictionaries have
+textual keys and values. Note that what we&#8217;re calling a dictionary- what Python calls a
+dictionary- is known as a hash in Perl, and is manifested in the Java API as a HashMap.
+It&#8217;s a set of key-value pairs.</p></div>
+<div class="paragraph"><p>To use kvspool, two programs open the same spool- which is just a directory. The writer
+puts dictionaries into the spool.  The reader gets dictionaries from the spool. It blocks
+when it&#8217;s caught up, waiting for more data.  Like this,</p></div>
 <div class="paragraph"><p><span class="image">
 <img src="reader-writer.png" alt="A spool writer and reader" />
 </span></p></div>
@@ -832,22 +833,13 @@ http://www.gnu.org/software/src-highlite -->
 <div class="content">
 <div class="title">Why did I write kvspool?</div>
 <div class="paragraph"><p>I wanted a very simple library that only writes to the local file system, so
-applications can link with kvspool and use it without undesirable side effects
-(such as creation of threads, sockets, or incurring blocking operations). I
-wanted fewer, rather than more, features- taking the Unix pipe as a role model.</p></div>
-<div class="paragraph"><p>I also wanted to cater to the needs of my specific application- a never-ending
-event stream consumed by slower processes that might come and go. I didn&#8217;t want
-to fill up the disk if the reader was gone. I also didn&#8217;t want to block the
-writer while waiting for a reader. So kvspool keeps data until the spool is full,
-then deletes the old data to make room for new- regardless of whether its been
-read.  This makes sense when individual events are disposable. Obviously, its
-not for finance, life support, and situations where every event is critical.
-I also wanted rewind and replay- to take a snapshot of a running event stream,
-then be able to work with it offline. I wrote kvspool because I wanted just the
-features that I needed, that fit my use cases, without heavy dependencies.</p></div>
+applications can use kvspool without having to set anything up ahead of time-
+no servers to run, no configuration files. I wanted no "side effects" to happen
+in my programs-- no thread creation, no sockets, nothing going on underneath.
+I wanted fewer rather than more features- taking the Unix pipe as a role model.</p></div>
 </div></div>
 <div class="paragraph"><div class="title">Loose coupling</div><p>Because the spooled data goes into the disk, the reader and writer are decoupled. They
-don&#8217;t have to run at the same time. They can come and go.  If the reader exits and
+don&#8217;t have to run at the same time. They can come and go.  Also, if the reader exits and
 restarts, it picks up where it left off.</p></div>
 <div class="sect2">
 <h3 id="_space_management">Space management</h3>
@@ -866,7 +858,7 @@ fully read. (The data is kept around to reserve that disk space, and to support 
 <div class="sect2">
 <h3 id="_shared_memory_i_o">Shared memory I/O</h3>
 <div class="paragraph"><p>You can locate a spool on a RAM disk if you want the speed of shared memory without true
-disk persistence- kvspool comes with a <tt>ramdisk</tt> utility to make one easily.</p></div>
+disk persistence- kvspool comes with a <tt>ramdisk</tt> utility to make one.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_data_attrition">Data attrition</h3>
@@ -919,24 +911,36 @@ that each reader gets it&#8217;s own spool:</p></div>
 <div class="content">
 <pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110</tt></pre>
 </div></div>
-<div class="paragraph"><p>Obviously, the IP address must be valid on the publisher side. The port is up to you. This
-type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
-you use the <tt>-s</tt> switch, on both pub and sub, it changes so each subscriber gets only a
-"1/n" share of the data. The latter mode is also preferred for 1-1 network replication.</p></div>
+<div class="paragraph"><p>This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
+(It also drops data is no subscriber is connected- it&#8217;s a blast to whoever is listening).</p></div>
+<div class="sect3">
+<h4 id="_s_mode">-s mode</h4>
+<div class="paragraph"><p>If you use the <tt>-s</tt> switch, on both ends (kvsp-pub and kvsp-sub), two things change:
+data remains queued in the spool until a subscriber connects (instead of being dropped if
+no one is listening). Secondly, if more than one subscriber connects, the data gets
+divided among them rather than sent to all of them. Generally the -s mode is preferred
+if it fits your use case.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_concentration">Concentration</h4>
+<div class="paragraph"><p>If you give multiple addresses to <tt>kvsp-sub</tt>, it connects to all of them and concentrates
+their published output into a single spool.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111</tt></pre>
+</div></div>
 <div class="sidebarblock">
 <div class="content">
 <div class="title">The big picture</div>
 <div class="paragraph"><p>Before moving on- let&#8217;s take a deep breath and recap. With kvspool, the writer
-is completely unaware (blissfully ignorant) of whether network replication is
-taking place. The writer just writes to the local spool. We run the <tt>kvsp-pub</tt>
-utility in the background; as data comes into the spool, it transmits it on the
-network.</p></div>
-<div class="paragraph"><p>On the other computer (the receiving side), we run <tt>kvsp-sub</tt> in the background.
+is unaware of whether network replication is taking place. The writer just writes
+to the local spool. We run the <tt>kvsp-pub</tt> utility in the background; as data
+comes into the spool, it transmits it on the network.</p></div>
+<div class="paragraph"><p>On the other computer- the receiving side- we run <tt>kvsp-sub</tt> in the background.
 It receives the network transmissions, and writes them to its local spool.</p></div>
-<div class="paragraph"><p>Using <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt>, we completely decouple the writer and reader
-from having to run on the same computer. They maintain a live, continuous
-replication. Whenever data is written to the source spool, it just "shows up"
-in the remote spool.</p></div>
+<div class="paragraph"><p>Use <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> to maintain a live, continuous replication. As
+data is written to the source spool, it just "shows up" in the remote spool.
+The reader and writer are completely uninvolved in the replication process.</p></div>
 </div></div>
 <div class="paragraph"><p><span class="image">
 <img src="pub-sub.png" alt="Publish and Subscribe" />
@@ -946,10 +950,11 @@ in the remote spool.</p></div>
 <td class="icon">
 <div class="title">Tip</div>
 </td>
-<td class="content">Use a daemon supervisor such as the author&#8217;s <a href="http://troydhanson.github.com/pmtr/">pmtr
-process monitor</a> to start up these commands at boot up and keep them running in the
-background.</td>
+<td class="content">A job manager such as the author&#8217;s <a href="http://troydhanson.github.com/pmtr/">pmtr process
+monitor</a> can be used to run <tt>kvsp-sub</tt> and <tt>kvsp-pub</tt> in the background, and restart
+them when the system reboots.</td>
 </tr></table>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -1308,39 +1313,6 @@ has the spool open at the time. It takes the spool directory as its only argumen
 </div>
 </div>
 <div class="sect1">
-<h2 id="_roadmap">Roadmap</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Kvspool is a young library and has some rough edges and room for improvement.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Autoconf detection for Perl, Python, Java should be improved
-</p>
-</li>
-<li>
-<p>
-Test suite is minimal, although kvspool has extensive production use
-</p>
-</li>
-<li>
-<p>
-It&#8217;s only been tested with Ubuntu 10.04
-</p>
-</li>
-<li>
-<p>
-Support multi-writer, multi-reader (see doc/future.txt)
-</p>
-</li>
-<li>
-<p>
-Replace segmented data files with one memory mapped, circular file
-</p>
-</li>
-</ul></div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="_acknowledgments">Acknowledgments</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Thanks to Trevor Adams for writing the original Perl and Java bindings and to
@@ -1351,8 +1323,8 @@ Replace segmented data files with one memory mapped, circular file
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 0.7<br />
-Last updated 2012-04-22 12:21:05 EDT
+Version 0.8<br />
+Last updated 2012-09-27 09:28:59 EDT
 </div>
 </div>
 </body>

@@ -1,7 +1,7 @@
 kvspool: a tool for data streams
 ================================
 Troy D. Hanson <tdh@tkhanson.net>
-v0.7, April 2012
+v0.8, September 2012
 
 kv-spool ("key-value" spool):: 
          a Linux-based C library, with Perl, Python and Java bindings, to stream data
@@ -10,13 +10,14 @@ kv-spool ("key-value" spool)::
 
 kvspool's niche
 ---------------
-Kvspool falls somewhere between the Unix pipe, a file-backed queue and a message-passing
-library. Its "unit of data" is the *dictionary*. (Or so Python calls it). Perl calls it a
-hash. It's a set of key-value pairs.
+Kvspool is a tiny API to stream dictionaries between programs.  The dictionaries have
+textual keys and values. Note that what we're calling a dictionary- what Python calls a 
+dictionary- is known as a hash in Perl, and is manifested in the Java API as a HashMap.
+It's a set of key-value pairs.
 
-To use kvspool, two programs open the same spool (which is just a directory). The writer
-puts dictionaries into the spool.  The reader gets dictionaries from the spool, blocking
-when it's caught up.  Like this,
+To use kvspool, two programs open the same spool- which is just a directory. The writer
+puts dictionaries into the spool.  The reader gets dictionaries from the spool. It blocks
+when it's caught up, waiting for more data.  Like this,
 
 image:reader-writer.png[A spool writer and reader]
 
@@ -39,25 +40,15 @@ Here's a sneak peak at a really simple writer and reader:
 .Why did I write kvspool?
 *******************************************************************************
 I wanted a very simple library that only writes to the local file system, so 
-applications can link with kvspool and use it without undesirable side effects 
-(such as creation of threads, sockets, or incurring blocking operations). I 
-wanted fewer, rather than more, features- taking the Unix pipe as a role model.
-
-I also wanted to cater to the needs of my specific application- a never-ending
-event stream consumed by slower processes that might come and go. I didn't want 
-to fill up the disk if the reader was gone. I also didn't want to block the 
-writer while waiting for a reader. So kvspool keeps data until the spool is full,
-then deletes the old data to make room for new- regardless of whether its been 
-read.  This makes sense when individual events are disposable. Obviously, its 
-not for finance, life support, and situations where every event is critical. 
-I also wanted rewind and replay- to take a snapshot of a running event stream, 
-then be able to work with it offline. I wrote kvspool because I wanted just the 
-features that I needed, that fit my use cases, without heavy dependencies.
+applications can use kvspool without having to set anything up ahead of time-
+no servers to run, no configuration files. I wanted no "side effects" to happen
+in my programs-- no thread creation, no sockets, nothing going on underneath.
+I wanted fewer rather than more features- taking the Unix pipe as a role model.
 *******************************************************************************
 
 .Loose coupling
 Because the spooled data goes into the disk, the reader and writer are decoupled. They
-don't have to run at the same time. They can come and go.  If the reader exits and
+don't have to run at the same time. They can come and go.  Also, if the reader exits and
 restarts, it picks up where it left off.
 
 Space management
@@ -76,7 +67,7 @@ fully read. (The data is kept around to reserve that disk space, and to support 
 Shared memory I/O
 ~~~~~~~~~~~~~~~~~
 You can locate a spool on a RAM disk if you want the speed of shared memory without true
-disk persistence- kvspool comes with a `ramdisk` utility to make one easily. 
+disk persistence- kvspool comes with a `ramdisk` utility to make one. 
 
 Data attrition
 ~~~~~~~~~~~~~~
@@ -124,34 +115,45 @@ Now, on the remote computers where you wish to subscribe to the spool, run:
 
   % kvsp-sub -d spool tcp://192.168.1.9:1110
 
-Obviously, the IP address must be valid on the publisher side. The port is up to you. This
-type of publish-subscribe does a "fan-out" (each subscriber gets a copy of the data). If
-you use the `-s` switch, on both pub and sub, it changes so each subscriber gets only a
-"1/n" share of the data. The latter mode is also preferred for 1-1 network replication.
+This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
+(It also drops data is no subscriber is connected- it's a blast to whoever is listening).
+
+-s mode
+^^^^^^^
+If you use the `-s` switch, on both ends (kvsp-pub and kvsp-sub), two things change: 
+data remains queued in the spool until a subscriber connects (instead of being dropped if
+no one is listening). Secondly, if more than one subscriber connects, the data gets 
+divided among them rather than sent to all of them. Generally the -s mode is preferred
+if it fits your use case.
+
+Concentration
+^^^^^^^^^^^^^
+If you give multiple addresses to `kvsp-sub`, it connects to all of them and concentrates
+their published output into a single spool.
+
+  % kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111
 
 .The big picture
 *******************************************************************************
 Before moving on- let's take a deep breath and recap. With kvspool, the writer
-is completely unaware (blissfully ignorant) of whether network replication is
-taking place. The writer just writes to the local spool. We run the `kvsp-pub` 
-utility in the background; as data comes into the spool, it transmits it on the 
-network.
+is unaware of whether network replication is taking place. The writer just writes 
+to the local spool. We run the `kvsp-pub` utility in the background; as data 
+comes into the spool, it transmits it on the network.
 
-On the other computer (the receiving side), we run `kvsp-sub` in the background. 
+On the other computer- the receiving side- we run `kvsp-sub` in the background. 
 It receives the network transmissions, and writes them to its local spool.
 
-Using `kvsp-pub` and `kvsp-sub`, we completely decouple the writer and reader
-from having to run on the same computer. They maintain a live, continuous
-replication. Whenever data is written to the source spool, it just "shows up"
-in the remote spool.
+Use `kvsp-pub` and `kvsp-sub` to maintain a live, continuous replication. As 
+data is written to the source spool, it just "shows up" in the remote spool.
+The reader and writer are completely uninvolved in the replication process.
 *******************************************************************************
 
 image:pub-sub.png[Publish and Subscribe]
 
 [TIP]
-Use a daemon supervisor such as the author's http://troydhanson.github.com/pmtr/[pmtr
-process monitor] to start up these commands at boot up and keep them running in the
-background.
+A job manager such as the author's http://troydhanson.github.com/pmtr/[pmtr process
+monitor] can be used to run `kvsp-sub` and `kvsp-pub` in the background, and restart
+them when the system reboots.
 
 License
 ~~~~~~~
@@ -425,16 +427,6 @@ The C API also has a function to rewind the spool, which works if there is no re
 has the spool open at the time. It takes the spool directory as its only argument.
 
  sp_reset(dir);
-
-Roadmap
--------
-Kvspool is a young library and has some rough edges and room for improvement.
-
-* Autoconf detection for Perl, Python, Java should be improved
-* Test suite is minimal, although kvspool has extensive production use
-* It's only been tested with Ubuntu 10.04
-* Support multi-writer, multi-reader (see doc/future.txt)
-* Replace segmented data files with one memory mapped, circular file
 
 Acknowledgments
 ---------------
