@@ -58,8 +58,8 @@ int main(int argc, char *argv[]) {
 
   if ( !(pub_context = zmq_init(1))) goto done;
   if ( !(pub_socket = zmq_socket(pub_context, push_mode?ZMQ_PUSH:ZMQ_PUB))) goto done;
-  if (zmq_bind(pub_socket, pub_transport) == -1) goto done;
   if (zmq_setsockopt(pub_socket, ZMQ_SNDHWM, &hwm, sizeof(hwm))) goto done;
+  if (zmq_bind(pub_socket, pub_transport) == -1) goto done;
 
   set = kv_set_new();
   sp = kv_spoolreader_new(spool);
