@@ -852,8 +852,11 @@ When we make a spool directory, we tell kvspool what its maximum size should be:
 % kvsp-init -s 1G spool</tt></pre>
 </div></div>
 <div class="paragraph"><p>This configures a maximum of 1 GB of data in the spool. After it reaches that size, it
-stays that size (by deleting old data as needed), but it never shrinks even if the data is
-fully read. (The data is kept around to reserve that disk space, and to support rewind.)</p></div>
+stays that size, by deleting old data as new data comes into the spool. Deletion is
+done in units that are about 10% of the total spool size.</p></div>
+<div class="paragraph"><p>A reader that&#8217;s offline long enough can eventually lose data- that is, miss the
+opportunity to read it before it&#8217;s deleted. Data loss is a deliberate feature - otherwise
+it&#8217;d be necessary to block the writer or use unbounded disk space.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_shared_memory_i_o">Shared memory I/O</h3>
@@ -861,26 +864,17 @@ fully read. (The data is kept around to reserve that disk space, and to support 
 disk persistence- kvspool comes with a <tt>ramdisk</tt> utility to make one.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_data_attrition">Data attrition</h3>
-<div class="paragraph"><p>When the spool is full, and new data arrives, the writer deletes the oldest data to make
-room for new. The attrition is done in units that are about 10% of the total spool size.
-A reader that runs all the time, or often enough to keep up with the writer, sees all the
-data flowing through the spool. But a reader that&#8217;s offline for long enough can eventually
-lose data (that is, miss the opportunity to read it before it&#8217;s deleted). Data loss is a
-deliberate feature - otherwise it&#8217;d be necessary to block the writer or use unbounded
-disk space.</p></div>
-</div>
-<div class="sect2">
 <h3 id="_rewind_and_replay">Rewind and replay</h3>
-<div class="paragraph"><p>The spool is a like a long reel-to-reel tape spliced together at the ends. Data remains in
-the spool, even after being read, until the spool needs to reuse the space. Kvspool takes
-advantage of this history by offering "rewind":</p></div>
+<div class="paragraph"><p>After data has been read from the spool, it remains in the spool directory until a future
+time when kvspool deletes it to make room for new data. This is the basis for a handy
+"rewind and replay" feature:</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% kvsp-rewind spool</tt></pre>
 </div></div>
-<div class="paragraph"><p>After a rewind, reading starts at the beginning of the spool. (The reader should be
-stopped before issuing the rewind).</p></div>
+<div class="paragraph"><p>After a rewind, reading starts at the beginning of the spool. The reader should be
+restarted for this to take effect. Rewind and replay is a convenient way to develop a
+program on a consistent source of test data.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_snapshot">Snapshot</h3>
@@ -890,8 +884,8 @@ environment, rewind it, and use it as a consistent source of test data.</p></div
 <div class="content">
 <pre><tt>% cp -r spool snapshot</tt></pre>
 </div></div>
-<div class="paragraph"><p>Copying a spool of "production data" is a great way to do development. The data is real,
-but there&#8217;s no need for the full production environment (no writer) needed to use it.</p></div>
+<div class="paragraph"><p>Copying a spool of production data lets you develop programs on real data but without
+needing a writer present- the data has been "canned".</p></div>
 </div>
 <div class="sect2">
 <h3 id="_local_and_network_replication">Local and Network Replication</h3>
@@ -912,7 +906,7 @@ that each reader gets it&#8217;s own spool:</p></div>
 <pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110</tt></pre>
 </div></div>
 <div class="paragraph"><p>This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
-(It also drops data is no subscriber is connected- it&#8217;s a blast to whoever is listening).</p></div>
+It drops data when no subscriber is connected- it&#8217;s a blast to whoever is listening.</p></div>
 <div class="sect3">
 <h4 id="_s_mode">-s mode</h4>
 <div class="paragraph"><p>If you use the <tt>-s</tt> switch, on both ends (kvsp-pub and kvsp-sub), two things change:
@@ -1039,7 +1033,14 @@ cellspacing="0" cellpadding="4">
 <div class="paragraph"><p>The <tt>kvsp-init</tt> command is used when a spool directory is first created, to set
 the maximum capacity of the spool. It accepts k/m/g/t suffixes. If <tt>kvsp-init</tt> is
 run later, after the spool already exists and has data, it is resized.</p></div>
-<div class="paragraph"><p>Run <tt>kvsp-status</tt> to see what percentage of the spool has been consumed by a reader.</p></div>
+<div class="paragraph"><p>Run <tt>kvsp-status</tt> to see what percentage of the spool has been consumed by a reader. It
+can take multiple spools as arguments. For each spool it prints a line like:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>/tmp/spool            99%        877kb         28secs</tt></pre>
+</div></div>
+<div class="paragraph"><p>The fields show what percentage of the spool has been read, how much data is currently in
+the spool, and how recently data was written into the spool.</p></div>
 <div class="paragraph"><p>The <tt>kvsp-rewind</tt> command resets the reader position to the beginning (oldest frame) in the
 spool. Use this command in order to "replay" the spooled data. Disconnect (terminate) any
 readers before running this command.</p></div>
@@ -1074,23 +1075,19 @@ cellspacing="0" cellpadding="4">
 </tr>
 <tr>
 <td align="left" valign="top"><p class="table"><tt>kvsp-sub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-sub -d spool tcp://192.168.1.9:1110</tt></p></td>
+<td align="left" valign="top"><p class="table"><tt>kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111</tt></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="paragraph"><p>The network utilities keep a local spool continuously replicated to a remote spool.
 These require ZeroMQ and Jansson libraries on the system in order to be built.</p></div>
-<div class="paragraph"><p>The <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> utilities publish a source spool to a remote spool.
-The publisher listens on the specified TCP port, and the subscribers connect to it.
-More than one subscriber may run simultaneously. (The <tt>kvsp-pub</tt> commands acts as the
-reader to the local stream, while <tt>kvsp-sub</tt> acts as the writer on remote stream.)</p></div>
-<div class="paragraph"><p>Giving the <tt>-s</tt> flag to both <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> changes the operation from
-"pub-sub" to "push-pull" mode (in ZeroMQ nomenclature). In this special <tt>-s</tt> mode, the
-<tt>kvsp-sub</tt> instances each receive a "1/n" share of the data rather than full take.  Also,
-in regular mode a publisher to which no subscriber is connected will drop frames but in
-the special mode, the publisher retains data until a subscriber connects. (The data
-capacity is still limited by the value set in <tt>kvsp-init</tt>.)</p></div>
+<div class="paragraph"><p>The utilities <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> exist to publish a source spool to a remote spool.
+The publisher listens on the specified TCP port. The subscriber connects to it.  If more
+than one subscriber connects, each receives a copy of the data. When no subscribers are
+connected, the publisher drops data. However, when the <tt>-s</tt> flag is given to both
+<tt>kvsp-pub</tt> and <tt>kvsp-sub</tt>, two things change: the publisher queues data when waiting for a
+subscriber instead of dropping it; and each subscriber gets a "1/n" share of the data.</p></div>
 </div>
 <div class="sect2">
 <h3 id="other_utilities">Other utilities</h3>
@@ -1144,7 +1141,7 @@ preserve consistency (so the same input value produces the same output value) bu
 value itself is a meaningless number.</p></div>
 <div class="paragraph"><p>A simple benchmark is performed by the <tt>kvsp-speed</tt> utility to measure read and write
 performance.</p></div>
-<div class="paragraph"><p>The <tt>ramdisk</tt> utility creates, queries or unmounts a ramdisk (a Linux tmpfs filesystem).
+<div class="paragraph"><p>The <tt>ramdisk</tt> utility creates, queries or unmounts a ramdisk- a Linux tmpfs filesystem.
 In the form shown in the table above it creates a 1G ramdisk on the <tt>/mnt/ramdisk</tt> mount
 point (this directory must already exist). A ramdisk created this way will appear in the
 <tt>/proc/mounts</tt> listing. If a ramdisk already exists on that mount point, the command does
@@ -1324,7 +1321,7 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div id="footer">
 <div id="footer-text">
 Version 0.8<br />
-Last updated 2012-09-27 09:28:59 EDT
+Last updated 2012-10-02 22:23:09 EDT
 </div>
 </div>
 </body>

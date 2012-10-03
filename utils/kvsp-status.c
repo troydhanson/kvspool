@@ -103,7 +103,7 @@ int main(int argc, char * argv[]) {
 
   while(optind < argc) {
     dir = argv[optind++];
-    printf("%-20s ", dir);
+    printf("%-40s ", dir);
     dir_status(dir);
   }
 
