@@ -43,7 +43,7 @@ void usage(char *prog) {
   fprintf(stderr, "  <path> is a 0mq path e.g. tcp://127.0.0.1:1234\n");
   exit(-1);
 }
-#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8)
+#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8) x(d64)
 #define x(t) #t,
 char *supported_types_str[] = { TYPES };
 #undef x
@@ -85,6 +85,7 @@ int set_to_binary(void *set, zmq_msg_t *part) {
   uint32_t l, u, a,b,c,d, abcd;
   uint16_t s;
   uint8_t g;
+  double h;
   utstring_clear(tmp);
   int rc=-1,i=0,*t;
   kv_t *kv;
@@ -101,6 +102,7 @@ int set_to_binary(void *set, zmq_msg_t *part) {
       l = 0; utstring_bincpy(tmp,&l,sizeof(l)); /* pack zero len string */
     } else {
       switch(*t) {
+        case d64: h=atof(kv->val); utstring_bincpy(tmp,&h,sizeof(h)); break;
         case i8:  g=atoi(kv->val); utstring_bincpy(tmp,&g,sizeof(g)); break;
         case i16: s=atoi(kv->val); utstring_bincpy(tmp,&s,sizeof(s)); break;
         case i32: u=atoi(kv->val); utstring_bincpy(tmp,&u,sizeof(u)); break;
