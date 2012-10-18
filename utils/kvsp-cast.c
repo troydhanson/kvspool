@@ -91,7 +91,7 @@ int set_to_binary(void *set, zmq_msg_t *part) {
   char **k=NULL;
   while( (k=(char**)utarray_next(output_keys,k))) {
     kv = kv_get(set,*k);
-    t = (int*)utarray_eltptr(output_types,i); assert(t && *t);
+    t = (int*)utarray_eltptr(output_types,i); assert(t);
     if (kv==NULL) {  /* only string-valued types are considered optional  */
                      /* since we can send them as zero length strings */
       if (*t != str) {
