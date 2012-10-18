@@ -38,12 +38,12 @@ UT_array /* of string */ *output_keys;
 UT_array /* of int */    *output_types;
 
 void usage(char *prog) {
-  fprintf(stderr, "usage: %s [-v] [-s] -d spool <path>\n", prog);
+  fprintf(stderr, "usage: %s [-v] -b <config> [-s] -d spool <path>\n", prog);
   fprintf(stderr, "  -s runs in push-pull mode instead of lossy pub/sub\n");
   fprintf(stderr, "  <path> is a 0mq path e.g. tcp://127.0.0.1:1234\n");
   exit(-1);
 }
-#define TYPES x(i16) x(i32) x(ipv4) x(str)
+#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8)
 #define x(t) #t,
 char *supported_types_str[] = { TYPES };
 #undef x
@@ -84,6 +84,7 @@ int parse_config(char *config_file) {
 int set_to_binary(void *set, zmq_msg_t *part) {
   uint32_t l, u, a,b,c,d, abcd;
   uint16_t s;
+  uint8_t c;
   utstring_clear(tmp);
   int rc=-1,i=0,*t;
   kv_t *kv;
@@ -100,6 +101,7 @@ int set_to_binary(void *set, zmq_msg_t *part) {
       l = 0; utstring_bincpy(tmp,&l,sizeof(l)); /* pack zero len string */
     } else {
       switch(*t) {
+        case i8:  c=atoi(kv->val); utstring_bincpy(tmp,&c,sizeof(c)); break;
         case i16: s=atoi(kv->val); utstring_bincpy(tmp,&s,sizeof(s)); break;
         case i32: u=atoi(kv->val); utstring_bincpy(tmp,&u,sizeof(u)); break;
         case str: 
