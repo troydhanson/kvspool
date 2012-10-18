@@ -84,7 +84,7 @@ int parse_config(char *config_file) {
 int set_to_binary(void *set, zmq_msg_t *part) {
   uint32_t l, u, a,b,c,d, abcd;
   uint16_t s;
-  uint8_t c;
+  uint8_t g;
   utstring_clear(tmp);
   int rc=-1,i=0,*t;
   kv_t *kv;
@@ -101,7 +101,7 @@ int set_to_binary(void *set, zmq_msg_t *part) {
       l = 0; utstring_bincpy(tmp,&l,sizeof(l)); /* pack zero len string */
     } else {
       switch(*t) {
-        case i8:  c=atoi(kv->val); utstring_bincpy(tmp,&c,sizeof(c)); break;
+        case i8:  g=atoi(kv->val); utstring_bincpy(tmp,&g,sizeof(g)); break;
         case i16: s=atoi(kv->val); utstring_bincpy(tmp,&s,sizeof(s)); break;
         case i32: u=atoi(kv->val); utstring_bincpy(tmp,&u,sizeof(u)); break;
         case str: 
