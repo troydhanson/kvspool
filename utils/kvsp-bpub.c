@@ -15,6 +15,7 @@
 #include "utarray.h"
 #include "utstring.h"
 #include "kvspool.h"
+#include "kvsp-bconfig.h"
 
 #if ZMQ_VERSION_MAJOR == 2
 #define zmq_sendmsg zmq_send
@@ -34,51 +35,11 @@ char *spool;
 int push_mode;
 UT_string *tmp;
 
-UT_array /* of string */ *output_keys;
-UT_array /* of int */    *output_types;
-
 void usage(char *prog) {
   fprintf(stderr, "usage: %s [-v] -b <config> [-s] -d spool <path>\n", prog);
   fprintf(stderr, "  -s runs in push-pull mode instead of lossy pub/sub\n");
   fprintf(stderr, "  <path> is a 0mq path e.g. tcp://127.0.0.1:1234\n");
   exit(-1);
-}
-#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8) x(d64)
-#define x(t) #t,
-char *supported_types_str[] = { TYPES };
-#undef x
-#define x(t) t,
-enum supported_types { TYPES };
-#undef x
-#define adim(a) (sizeof(a)/sizeof(*a))
-int parse_config(char *config_file) {
-  char line[100];
-  FILE *file;
-  int rc=-1;
-  int type,t;
-  char *sp,*nl;
-  if ( (file = fopen(config_file,"r")) == NULL) {
-    fprintf(stderr,"can't open %s: %s\n", config_file, strerror(errno));
-    goto done;
-  }
-  while (fgets(line,sizeof(line),file) != NULL) {
-    sp = strchr(line,' '); if (!sp) continue;
-    nl = strchr(line,'\n'); if (nl) *nl='\0';
-    for(t=0; t<adim(supported_types_str); t++) {
-      if(!strncmp(supported_types_str[t],line,sp-line)) break;
-    }
-    if (t >= adim(supported_types_str)){
-      fprintf(stderr,"unknown type %s\n",line); 
-      goto done;
-    }
-    char *id = strdup(sp+1);
-    utarray_push_back(output_types,&t);
-    utarray_push_back(output_keys,&id);
-  }
-  rc = 0;
- done:
-  if (file) fclose(file);
-  return rc;
 }
 
 int set_to_binary(void *set, zmq_msg_t *part) {
@@ -88,40 +49,41 @@ int set_to_binary(void *set, zmq_msg_t *part) {
   double h;
   utstring_clear(tmp);
   int rc=-1,i=0,*t;
-  kv_t *kv;
-  char **k=NULL;
+  kv_t *kv, kvdef;
+  char **k=NULL,**def;
   while( (k=(char**)utarray_next(output_keys,k))) {
     kv = kv_get(set,*k);
     t = (int*)utarray_eltptr(output_types,i); assert(t);
-    if (kv==NULL) {  /* only string-valued types are considered optional  */
-                     /* since we can send them as zero length strings */
-      if (*t != str) {
+    def = (char**)utarray_eltptr(output_defaults,i); assert(def);
+    if (kv==NULL) { /* no such key */
+      kv=&kvdef;
+      if (*def) {kv->val=*def; kv->vlen=strlen(*def);} /* default */
+      else if (*t == str) {kv->val=NULL; kv->vlen=0;}  /* zero len string */
+      else {
         fprintf(stderr,"required key %s not present in spool frame\n", *k);
         goto done;
       }
-      l = 0; utstring_bincpy(tmp,&l,sizeof(l)); /* pack zero len string */
-    } else {
-      switch(*t) {
-        case d64: h=atof(kv->val); utstring_bincpy(tmp,&h,sizeof(h)); break;
-        case i8:  g=atoi(kv->val); utstring_bincpy(tmp,&g,sizeof(g)); break;
-        case i16: s=atoi(kv->val); utstring_bincpy(tmp,&s,sizeof(s)); break;
-        case i32: u=atoi(kv->val); utstring_bincpy(tmp,&u,sizeof(u)); break;
-        case str: 
-          l=kv->vlen; utstring_bincpy(tmp,&l,sizeof(l)); /* length prefix */
-          utstring_bincpy(tmp,kv->val,kv->vlen);         /* string itself */
-          break;
-        case ipv4: 
-          if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||
-             (a > 255 || b > 255 || c > 255 || d > 255)) {
-            fprintf(stderr,"invalid IP for key %s: %s\n",*k,kv->val);
-            goto done;
-          }
-          abcd = (a << 24) | (b << 16) | (c << 8) | d;
-          abcd = htonl(abcd);
-          utstring_bincpy(tmp,&abcd,sizeof(abcd));
-          break;
-        default: assert(0); break;
-      }
+    }
+    switch(*t) {
+      case d64: h=atof(kv->val); utstring_bincpy(tmp,&h,sizeof(h)); break;
+      case i8:  g=atoi(kv->val); utstring_bincpy(tmp,&g,sizeof(g)); break;
+      case i16: s=atoi(kv->val); utstring_bincpy(tmp,&s,sizeof(s)); break;
+      case i32: u=atoi(kv->val); utstring_bincpy(tmp,&u,sizeof(u)); break;
+      case str: 
+        l=kv->vlen; utstring_bincpy(tmp,&l,sizeof(l)); /* length prefix */
+        utstring_bincpy(tmp,kv->val,kv->vlen);         /* string itself */
+        break;
+      case ipv4: 
+        if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||
+           (a > 255 || b > 255 || c > 255 || d > 255)) {
+          fprintf(stderr,"invalid IP for key %s: %s\n",*k,kv->val);
+          goto done;
+        }
+        abcd = (a << 24) | (b << 16) | (c << 8) | d;
+        abcd = htonl(abcd);
+        utstring_bincpy(tmp,&abcd,sizeof(abcd));
+        break;
+      default: assert(0); break;
     }
     i++;
   }
@@ -141,6 +103,7 @@ int main(int argc, char *argv[]) {
   char *config_file;
   set = kv_set_new();
   utarray_new(output_keys, &ut_str_icd);
+  utarray_new(output_defaults, &ut_str_icd);
   utarray_new(output_types,&ut_int_icd);
   utstring_new(tmp);
 
@@ -183,6 +146,7 @@ int main(int argc, char *argv[]) {
   if (sp) kv_spoolreader_free(sp);
   kv_set_free(set);
   utarray_free(output_keys);
+  utarray_free(output_defaults);
   utarray_free(output_types);
   utstring_free(tmp);
 

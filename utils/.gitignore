@@ -15,3 +15,6 @@ kvsp-spw
 .deps
 Makefile.in
 ramdisk
+kvsp-bpub
+kvsp-bsub
+.gdb_history
