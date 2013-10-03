@@ -217,7 +217,7 @@ static int verify_and_lock(char *path, int create) {
     goto done;
   }
 
-  if (sb.st_size) lseek(fd,-1*(sizeof(off_t)),SEEK_END);
+  if (sb.st_size>8) lseek(fd,-1*(sizeof(off_t)),SEEK_END);
 
  done:
   return fd;
