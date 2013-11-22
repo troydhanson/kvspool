@@ -1,7 +1,7 @@
 AM_CFLAGS = -I.. -I../include
 LIBSPOOL = -L../src -lkvspool
 bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-init kvsp-status \
-               kvsp-speed kvsp-mod kvsp-rewind \
+               kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub \
                ramdisk
 
 kvsp_spr_LDADD = $(LIBSPOOL)
@@ -17,9 +17,11 @@ kvsp_bsub_LDADD = $(LIBSPOOL)
 kvsp_pub_LDADD = $(LIBSPOOL)
 kvsp_sub_LDADD = $(LIBSPOOL)
 kvsp_concen_LDADD = $(LIBSPOOL)
+kvsp_tpub_LDADD = $(LIBSPOOL)
 
 kvsp_bpub_SOURCES = kvsp-bpub.c kvsp-bconfig.c
 kvsp_bsub_SOURCES = kvsp-bsub.c kvsp-bconfig.c
+kvsp_tpub_SOURCES = kvsp-tpub.c kvsp-bconfig.c
 
 if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-bpub kvsp-bsub
@@ -47,3 +49,4 @@ kvsp_pub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_bpub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_bsub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_concen_DEPENDENCIES = ../src/libkvspool.a
+kvsp_tpub_DEPENDENCIES = ../src/libkvspool.a
