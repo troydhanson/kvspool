@@ -912,51 +912,8 @@ that each reader gets it&#8217;s own spool:</p></div>
 <pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110</tt></pre>
 </div></div>
 <div class="paragraph"><p>This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
-It drops data when no subscriber is connected- it&#8217;s a blast to whoever is listening.</p></div>
-<div class="sect3">
-<h4 id="_pub_sub_modes">Pub-sub modes</h4>
-<div class="paragraph"><p>Kvspool includes three kinds of pub-sub utilities. They vary in the underlying transport
-and data format.</p></div>
-<div class="tableblock">
-<table rules="none"
-width="50%"
-frame="border"
-cellspacing="0" cellpadding="4">
-<col width="12%" />
-<col width="12%" />
-<col width="62%" />
-<col width="12%" />
-<thead>
-<tr>
-<th align="left" valign="top"> publisher    </th>
-<th align="left" valign="top"> subscriber    </th>
-<th align="left" valign="top"> data format and transport  </th>
-<th align="left" valign="top"> notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-pub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-sub</tt></p></td>
-<td align="left" valign="top"><p class="table">JSON over zeromq pub/sub</p></td>
-<td align="left" valign="top"><p class="table">-s uses push/pull</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-bpub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-bsub</tt></p></td>
-<td align="left" valign="top"><p class="table">binary over zeromq pub/sub</p></td>
-<td align="left" valign="top"><p class="table">-s uses push/pull</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-tpub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>n/a</tt></p></td>
-<td align="left" valign="top"><p class="table">binary over plain TCP</p></td>
-<td align="left" valign="top"><p class="table"></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
+It drops data when no subscriber is connected- it&#8217;s a blast to whoever is listening.
+Kvspool includes three kinds of pub-sub utilities described <a href="#net_options">below</a>.</p></div>
 <div class="sect3">
 <h4 id="_concentration">Concentration</h4>
 <div class="paragraph"><p>If you give multiple addresses to <tt>kvsp-sub</tt>, it connects to all of them and concentrates
@@ -1040,8 +997,8 @@ are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based ut
 width="90%"
 frame="border"
 cellspacing="0" cellpadding="4">
-<col width="16%" />
-<col width="83%" />
+<col width="28%" />
+<col width="71%" />
 <thead>
 <tr>
 <th align="left" valign="top">command     </th>
@@ -1096,7 +1053,7 @@ spools and makes a single output spool from them. It is a spool concentrator. Th
 source spools are flagged with <tt>-d spool</tt> and the final argument is the output spool.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_network_utilities">Network utilities</h3>
+<h3 id="net_utilities">Network utilities</h3>
 <div class="tableblock">
 <table rules="none"
 width="90%"
@@ -1163,49 +1120,17 @@ i8 temp</tt></pre>
 (timestamp, sensor_name and temp); any other keys get ignored. Their values are parsed
 to the binary types listed (i32, str and i8). The binary buffer is transmitted
 without any keys. On the receiving subscriber, the binary is unpacked using the same file.
-The reason for using binary publishing is speed- it&#8217;s often an order of magnitude faster.</p></div>
-<div class="tableblock">
-<table rules="none"
-width="90%"
-frame="border"
-cellspacing="0" cellpadding="4">
-<caption class="title">Table 1. Data types supported in <tt>cast.cfg</tt></caption>
-<col width="16%" />
-<col width="83%" />
-<thead>
-<tr>
-<th align="left" valign="top">data type  </th>
-<th align="left" valign="top">  meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>i8</tt></p></td>
-<td align="left" valign="top"><p class="table">byte (8-bit int)</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>i16</tt></p></td>
-<td align="left" valign="top"><p class="table">short (16-bit int)</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>i32</tt></p></td>
-<td align="left" valign="top"><p class="table">integer (32-bit int)</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>ipv4</tt></p></td>
-<td align="left" valign="top"><p class="table">dotted quad IP address</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>str</tt></p></td>
-<td align="left" valign="top"><p class="table">string</p></td>
-</tr>
-<tr>
-<td align="left" valign="top"><p class="table"><tt>d64</tt></p></td>
-<td align="left" valign="top"><p class="table">double (64-bit float)</p></td>
-</tr>
-</tbody>
-</table>
-</div>
+The reason for using binary publishing is speed- it&#8217;s often an order of magnitude faster.
+These data types may appear in <tt>cast.cfg</tt></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>i8        //  byte (8-bit int)
+i16       //  short (16-bit int)
+i32       //  integer (32-bit int)
+ipv4      //  dotted quad IP address
+str       //  string
+d64       //  double (64-bit float)</tt></pre>
+</div></div>
 </div>
 <div class="sect3">
 <h4 id="_kvsp_tpub">kvsp-tpub</h4>
@@ -1449,7 +1374,7 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div id="footer">
 <div id="footer-text">
 Version 0.9<br />
-Last updated 2014-04-12 10:35:20 EDT
+Last updated 2014-04-12 10:51:11 EDT
 </div>
 </div>
 </body>

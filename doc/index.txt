@@ -114,19 +114,7 @@ Now, on the remote computers where you wish to subscribe to the spool, run:
 
 This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
 It drops data when no subscriber is connected- it's a blast to whoever is listening.
-
-Pub-sub modes
-^^^^^^^^^^^^^
-Kvspool includes three kinds of pub-sub utilities. They vary in the underlying transport
-and data format.  
-
-[width="50%",cols="10m,10m,50,10",grid="none",options="header"]
-|===============================================================================
-| publisher    | subscriber    | data format and transport  | notes
-| kvsp-pub     | kvsp-sub      | JSON over zeromq pub/sub   | -s uses push/pull
-| kvsp-bpub    | kvsp-bsub     | binary over zeromq pub/sub | -s uses push/pull
-| kvsp-tpub    | n/a           | binary over plain TCP      | 
-|===============================================================================
+Kvspool includes three kinds of pub-sub utilities described <<net_options,below>>. 
 
 Concentration
 ^^^^^^^^^^^^^
@@ -193,7 +181,7 @@ Utilities
 Basic
 ~~~~~
 
-[width="90%",cols="10m,50m",grid="none",options="header"]
+[width="90%",cols="20m,50m",grid="none",options="header"]
 |===============================================================================
 |command     | example 
 |kvsp-init   | kvsp-init -s 1G spool
@@ -229,6 +217,7 @@ The `kvsp-concen` utility is the opposite of `kvsp-tee`. It takes multiple sourc
 spools and makes a single output spool from them. It is a spool concentrator. The
 source spools are flagged with `-d spool` and the final argument is the output spool.
 
+[[net_utilities]]
 Network utilities
 ~~~~~~~~~~~~~~~~~
 
@@ -273,18 +262,14 @@ In this example, every dictionary in the source spool is expected to have three 
 to the binary types listed (i32, str and i8). The binary buffer is transmitted
 without any keys. On the receiving subscriber, the binary is unpacked using the same file.
 The reason for using binary publishing is speed- it's often an order of magnitude faster.
+These data types may appear in `cast.cfg`
 
-.Data types supported in `cast.cfg`
-[width="90%",cols="10m,50",grid="none",options="header"]
-|===============================================================================
-|data type  |  meaning 
-| i8        |  byte (8-bit int)
-| i16       |  short (16-bit int)
-| i32       |  integer (32-bit int)
-| ipv4      |  dotted quad IP address
-| str       |  string
-| d64       |  double (64-bit float)
-|===============================================================================
+   i8        //  byte (8-bit int)
+   i16       //  short (16-bit int)
+   i32       //  integer (32-bit int)
+   ipv4      //  dotted quad IP address
+   str       //  string
+   d64       //  double (64-bit float)
 
 kvsp-tpub
 ^^^^^^^^^
