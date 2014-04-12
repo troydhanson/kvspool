@@ -10,6 +10,14 @@ pub-sub.png: pub-sub.txt
 kvspool.html: kvspool.txt
 	asciidoc -a toc2 $<
 
+TMP=/tmp/kvspool-gh-pages
+stage:
+	mkdir -p ${TMP}
+	rm -if ${TMP}/*
+	cp LICENSE.txt ${TMP}
+	cp *.html ${TMP}
+	cp *.png ${TMP}
+
 .PHONY: clean
 
 clean:
