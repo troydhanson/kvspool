@@ -850,8 +850,8 @@ restarts, it picks up where it left off.</p></div>
 <div class="sect2">
 <h3 id="_space_management">Space management</h3>
 <div class="paragraph"><p>In a streaming data environment, the writer and reader can run for months on end.  A key
-implementation requirement is that we don&#8217;t fill up the disk.  So, when we make a spool
-directory, we tell kvspool what its maximum size should be:</p></div>
+requirement is that we don&#8217;t fill up the disk.  So, when we make a spool directory, we
+tell kvspool what its maximum size should be:</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% mkdir spool
@@ -895,12 +895,6 @@ needing a writer present- the data has been "canned".</p></div>
 </div>
 <div class="sect2">
 <h3 id="_local_and_network_replication">Local and Network Replication</h3>
-<div class="paragraph"><p>A spool supports one writer and one reader. To support multiple readers, "tee" it out so
-that each reader gets it&#8217;s own spool:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><tt>% kvsp-tee -s spool copy1 copy2</tt></pre>
-</div></div>
 <div class="paragraph"><p>You can also publish a spool over the network, like this:</p></div>
 <div class="literalblock">
 <div class="content">
@@ -911,17 +905,13 @@ that each reader gets it&#8217;s own spool:</p></div>
 <div class="content">
 <pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110</tt></pre>
 </div></div>
-<div class="paragraph"><p>This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
-It drops data when no subscriber is connected- it&#8217;s a blast to whoever is listening.
-Kvspool includes three kinds of pub-sub utilities described <a href="#net_options">below</a>.</p></div>
-<div class="sect3">
-<h4 id="_concentration">Concentration</h4>
 <div class="paragraph"><p>If you give multiple addresses to <tt>kvsp-sub</tt>, it connects to all of them and concentrates
 their published output into a single spool.</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111</tt></pre>
 </div></div>
+<div class="paragraph"><p>Kvspool includes a few kinds of replication utilities described <a href="#net_utilities">below</a>.</p></div>
 <div class="sidebarblock">
 <div class="content">
 <div class="title">The big picture</div>
@@ -949,16 +939,15 @@ them when the system reboots.</td>
 </tr></table>
 </div>
 </div>
-</div>
 <div class="sect2">
 <h3 id="_license">License</h3>
 <div class="paragraph"><p>See the <a href="LICENSE.txt">LICENSE.txt</a> file. Kvspool is free and open source.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_resources_amp_help">Resources &amp; Help</h3>
-<div class="paragraph"><p>Contact the author directly at <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a> if you have questions or other issues.
-News about software updates are posted to the author&#8217;s blog: <a href="http://tkhanson.net/blog">http://tkhanson.net/blog</a>.
-Additional software by the author is cataloged at <a href="http://troydhanson.github.io/">http://troydhanson.github.io/</a>.</p></div>
+<div class="paragraph"><p>You can ask questions to the author @troydhanson or <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>. (Sorry if I&#8217;m
+behind or unable to answer!) Additional software by the author is cataloged at
+<a href="http://troydhanson.github.io/">http://troydhanson.github.io/</a>.</p></div>
 </div>
 </div>
 </div>
@@ -1138,8 +1127,8 @@ d64       //  double (64-bit float)</tt></pre>
 you have to code your own subscriber to use it. It takes a cast.cfg of the same form as above.
 It listens on the specified port, and when a subscriber connects to it, the dictionaries
 in the spool are transmitted as length-prefixed binary messages. The length prefix is a
-32-bit (host-order endianness) integer specifying the message length that follows. The
-binary data is transmitted in host-order endianness, except IP addresses in network order.</p></div>
+32-bit  integer (host-endianness) specifying the message length that follows. The remaining
+binary data is transmitted in host-endianness, except IP addresses in network order.</p></div>
 </div>
 </div>
 <div class="sect2">
@@ -1374,7 +1363,7 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div id="footer">
 <div id="footer-text">
 Version 0.9<br />
-Last updated 2014-04-12 10:51:11 EDT
+Last updated 2014-04-12 11:08:03 EDT
 </div>
 </div>
 </body>
