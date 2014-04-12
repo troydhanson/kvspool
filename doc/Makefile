@@ -1,4 +1,4 @@
-all: reader-writer.png pub-sub.png kvspool.html
+all: reader-writer.png pub-sub.png index.html
 DITAA=java -jar ditaa0_9.jar -o
 
 reader-writer.png: reader-writer.txt
@@ -7,7 +7,7 @@ reader-writer.png: reader-writer.txt
 pub-sub.png: pub-sub.txt
 	$(DITAA) $<
 
-kvspool.html: kvspool.txt
+index.html: index.txt
 	asciidoc -a toc2 $<
 
 TMP=/tmp/kvspool-gh-pages
@@ -21,4 +21,4 @@ stage:
 .PHONY: clean
 
 clean:
-	rm -f kvspool.html
+	rm -f index.html
