@@ -56,8 +56,8 @@ restarts, it picks up where it left off.
 Space management
 ~~~~~~~~~~~~~~~~
 In a streaming data environment, the writer and reader can run for months on end.  A key
-implementation requirement is that we don't fill up the disk.  So, when we make a spool
-directory, we tell kvspool what its maximum size should be:
+requirement is that we don't fill up the disk.  So, when we make a spool directory, we
+tell kvspool what its maximum size should be:
 
   % mkdir spool
   % kvsp-init -s 1G spool
@@ -99,11 +99,6 @@ needing a writer present- the data has been "canned".
 
 Local and Network Replication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-A spool supports one writer and one reader. To support multiple readers, "tee" it out so
-that each reader gets it's own spool:
-
-  % kvsp-tee -s spool copy1 copy2
-
 You can also publish a spool over the network, like this:
 
   % kvsp-pub -d spool tcp://192.168.1.9:1110
@@ -112,16 +107,12 @@ Now, on the remote computers where you wish to subscribe to the spool, run:
 
   % kvsp-sub -d spool tcp://192.168.1.9:1110
 
-This type of publish-subscribe does a "fan-out". Each subscriber gets a copy of the data.
-It drops data when no subscriber is connected- it's a blast to whoever is listening.
-Kvspool includes three kinds of pub-sub utilities described <<net_options,below>>. 
-
-Concentration
-^^^^^^^^^^^^^
 If you give multiple addresses to `kvsp-sub`, it connects to all of them and concentrates
 their published output into a single spool.
 
   % kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111
+
+Kvspool includes a few kinds of replication utilities described <<net_utilities,below>>. 
 
 .The big picture
 *******************************************************************************
@@ -151,9 +142,9 @@ See the link:LICENSE.txt[LICENSE.txt] file. Kvspool is free and open source.
 
 Resources & Help 
 ~~~~~~~~~~~~~~~~
-Contact the author directly at tdh@tkhanson.net if you have questions or other issues.
-News about software updates are posted to the author's blog: http://tkhanson.net/blog.
-Additional software by the author is cataloged at http://troydhanson.github.io/.
+You can ask questions to the author @troydhanson or tdh@tkhanson.net. (Sorry if I'm
+behind or unable to answer!) Additional software by the author is cataloged at
+http://troydhanson.github.io/.
 
 Getting kvspool
 ---------------
@@ -277,8 +268,8 @@ Finally there is a "plain TCP" binary publisher. It has no subscriber counterpar
 you have to code your own subscriber to use it. It takes a cast.cfg of the same form as above.
 It listens on the specified port, and when a subscriber connects to it, the dictionaries
 in the spool are transmitted as length-prefixed binary messages. The length prefix is a
-32-bit (host-order endianness) integer specifying the message length that follows. The
-binary data is transmitted in host-order endianness, except IP addresses in network order.
+32-bit  integer (host-endianness) specifying the message length that follows. The remaining
+binary data is transmitted in host-endianness, except IP addresses in network order.
 
 [[other_utilities]]
 Other utilities
