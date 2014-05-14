@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
   while ( (opt = getopt(argc, argv, "v+d:b:p:")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
-      case 'd': spool=optarg; break;
+      case 'd': spool=strdup(optarg); break;
       case 'b': config_file=strdup(optarg); break;
       case 'p': port=atoi(optarg); break;
       default: usage(argv[0]); break;

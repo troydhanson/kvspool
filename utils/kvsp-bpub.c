@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
     switch (opt) {
       case 'v': verbose++; break;
       case 's': push_mode++; break;
-      case 'd': spool=optarg; break;
+      case 'd': spool=strdup(optarg); break;
       case 'b': config_file=strdup(optarg); break;
       default: usage(argv[0]); break;
     }

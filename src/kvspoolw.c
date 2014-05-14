@@ -267,15 +267,16 @@ static int lock_output_spool(const char *dir, kv_spoolw_t *sp) {
 }
 
 /* open a new file with an incremented sequence number. e.g., if the 
- * original is   /tmp/myspool/spool.123456789.999-000.sp 
- * new one is    /tmp/myspool/spool.123456789.999-001.sp  
+ * original is   /tmp/myspool/spool.123456789.999-9.sp 
+ * new one is    /tmp/myspool/spool.123456789.999-10.sp  
 */
 static int kv_spoolwriter_reopen(kv_spoolw_t *sp) {
   assert(sp->path);
   int fd, rc = -1, seq;
   char *path, *hyph, *seqp;
 
-  path = strdup(sp->path);
+  path = malloc(strlen(sp->path)+10); if (!path) goto done; 
+  strcpy(path,sp->path);
   hyph = strrchr(path,'-'); if (!hyph) goto done;
   seqp = hyph + 1;
   if (sscanf(seqp, "%u", &seq) != 1) goto done;
