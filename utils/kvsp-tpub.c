@@ -23,6 +23,8 @@ int fa;  // socket to client
 char *spool;
 UT_string *buf;
 
+char discard[1024];
+
 void usage(char *prog) {
   fprintf(stderr, "usage: %s [-v] -b <config> -d spool -p <port>\n", prog);
   exit(-1);
@@ -196,6 +198,8 @@ int main(int argc, char *argv[]) {
       b += c;
       sz -= c;
     } while(sz);
+    // discard any pending response. used remotely for detecting half-open TCP 
+    recv(fa, discard, sizeof(discard), MSG_DONTWAIT);
   }
 
   close(fa);
