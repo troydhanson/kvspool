@@ -13,6 +13,11 @@ AC_CHECK_LIB(jansson,json_string,
   AM_CONDITIONAL(HAVE_JANSSON,true),
   AM_CONDITIONAL(HAVE_JANSSON,false))
 
+# is nanomsg installed
+AC_CHECK_LIB(nanomsg,nn_socket,
+  AM_CONDITIONAL(HAVE_NANOMSG,true),
+  AM_CONDITIONAL(HAVE_NANOMSG,false))
+
 # is zeromq (0MQ) installed
 AC_CHECK_LIB(zmq,zmq_init,
   AM_CONDITIONAL(HAVE_ZEROMQ,true),

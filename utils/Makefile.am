@@ -14,6 +14,8 @@ kvsp_mod_LDADD = $(LIBSPOOL)
 kvsp_rewind_LDADD = $(LIBSPOOL)
 kvsp_bpub_LDADD = $(LIBSPOOL)
 kvsp_bsub_LDADD = $(LIBSPOOL)
+kvsp_npub_LDADD = $(LIBSPOOL)
+kvsp_nsub_LDADD = $(LIBSPOOL)
 kvsp_pub_LDADD = $(LIBSPOOL)
 kvsp_sub_LDADD = $(LIBSPOOL)
 kvsp_concen_LDADD = $(LIBSPOOL)
@@ -21,7 +23,15 @@ kvsp_tpub_LDADD = $(LIBSPOOL)
 
 kvsp_bpub_SOURCES = kvsp-bpub.c kvsp-bconfig.c
 kvsp_bsub_SOURCES = kvsp-bsub.c kvsp-bconfig.c
+kvsp_npub_SOURCES = kvsp-npub.c kvsp-bconfig.c
+kvsp_nsub_SOURCES = kvsp-nsub.c kvsp-bconfig.c
 kvsp_tpub_SOURCES = kvsp-tpub.c kvsp-bconfig.c
+
+if HAVE_NANOMSG
+bin_PROGRAMS += kvsp-npub kvsp-nsub
+kvsp_npub_LDADD += -lnanomsg 
+kvsp_nsub_LDADD += -lnanomsg 
+endif
 
 if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-bpub kvsp-bsub
@@ -48,5 +58,7 @@ kvsp_sub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_pub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_bpub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_bsub_DEPENDENCIES = ../src/libkvspool.a
+kvsp_npub_DEPENDENCIES = ../src/libkvspool.a
+kvsp_nsub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_concen_DEPENDENCIES = ../src/libkvspool.a
 kvsp_tpub_DEPENDENCIES = ../src/libkvspool.a
