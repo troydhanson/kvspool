@@ -12,14 +12,23 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "utarray.h"
+#include <limits.h>
 
 #define TMPFS_MAGIC           0x01021994
  
 /******************************************************************************
- * ramdisk
+ * ramdisk                                                  Troy D. Hanson
+ *
  *   a utility with modes to: 
  *   - create a ramdisk,
- *   - attrition its contents (continually or once)
+ *   - query a ramdisk (see its size and percent full)
+ *   - unmount a ramdisk 
+ *
+ * The ramdisk used here is the 'tmpfs' filesystem which is not strictly a 
+ * pure RAM device; it can swap under the kernel's discretion. I have also
+ * noticed that a large ramdisk (say, 6gb on a system with 8gb ram) might 
+ * exhibit 'no space left on device' even when only 50% full. A better 
+ * query mode would show the status (resident, paged, etc) of ramdisk pages.
  *****************************************************************************/
 
 /* command line configuration parameters */
@@ -30,23 +39,42 @@ char *ramdisk;
 UT_array *dirs;
  
 void usage(char *prog) {
-  fprintf(stderr, "usage:\n\n");
-  fprintf(stderr, "Create ramdisk, unless it already exists:\n");
-  fprintf(stderr, "   %%%s -c [-s 10g] [-d dir [-d dir]] /path/to/ramdisk\n", prog);
-  fprintf(stderr, "   size is bytes, or suffixed with k|m|g|%% [def: 50%%]\n");
-  fprintf(stderr, "   [-d dir] are dirs in ramdisk to create (absolute path)\n");
+  fprintf(stderr, "This utility creates a tmpfs ramdisk on a given mountpount.\n");
+  fprintf(stderr, "It does nothing if a tmpfs is already mounted on that point.\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "Query mount point to detect/describe ramdisk\n");
-  fprintf(stderr, "   %%%s -q /path/to/ramdisk\n", prog);
-  fprintf(stderr, "   /proc/mounts lists all the ramdisks (and other disks)\n");
+  fprintf(stderr,"usage:\n\n");
+  fprintf(stderr, "-c (create mode):\n");
+  fprintf(stderr, "   %s -c [-s <size>] [-d <dir>] <ramdisk-mount-point>\n", prog);
+  fprintf(stderr, "   -s <size> suffixed with k|m|g|%% [default: 50%%]\n");
+  fprintf(stderr, "   -d <dir> directory to post-create inside ramdisk (repeatable)\n");
   fprintf(stderr, "\n");
-  fprintf(stderr, "Unmount ramdisk\n");
-  fprintf(stderr, "   %%%s -u /path/to/ramdisk\n", prog);
+  fprintf(stderr, "-q (query mode):\n");
+  fprintf(stderr, "   %s -q <ramdisk-mount-point>\n", prog);
   fprintf(stderr, "\n");
+  fprintf(stderr, "-u (unmount mode):\n");
+  fprintf(stderr, "   %s -u <ramdisk-mount-point>\n", prog);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Examples of creating a ramdisk:\n");
+  fprintf(stderr, " %s -c -s 1g /mnt/ramdisk\n", prog);
+  fprintf(stderr, " %s -c -s 1g -d /mnt/ramdisk/in -d /mnt/ramdisk/out /mnt/ramdisk\n", prog);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Note: 'cat /proc/mounts' to see mounted tmpfs ramdisks.\n");
   exit(-1);
 }
 
+/* Prevent a ramdisk from being mounted at the mount-point of an 
+ * existing ramdisk. This prevents people from accidently stacking tmpfs.
+ * However it is OK to mount a ramdisk on a subdirectory of another ramdisk. */
 int suitable_mountpoint(char *dir, struct stat *sb, struct statfs *sf) {
+  size_t dlen = strlen(dir);
+  char pdir[PATH_MAX];
+  struct stat psb;
+
+  if (dlen+4 > PATH_MAX) {
+    syslog(LOG_ERR, "path too long\n");
+    return -1;
+  }
+
   if (stat(ramdisk, sb) == -1) { /* does mount point exist? */
     syslog(LOG_ERR, "no mount point %s: %s\n", ramdisk, strerror(errno));
     return -1;
@@ -59,6 +87,20 @@ int suitable_mountpoint(char *dir, struct stat *sb, struct statfs *sf) {
     syslog(LOG_ERR, "can't statfs %s: %s\n", ramdisk, strerror(errno));
     return -1;
   }
+
+  /* is it already a tmpfs mountpoint? */
+  memcpy(pdir,dir,dlen+1); strcat(pdir,"/..");
+  if (stat(pdir, &psb) == -1) {
+    syslog(LOG_ERR, "can't stat %s: %s\n", pdir, strerror(errno));
+    return -1;
+  }
+  int is_mountpoint = (psb.st_dev == sb->st_dev) ? 0 : 1;
+  int is_tmpfs = (sf->f_type == TMPFS_MAGIC);
+  if (is_mountpoint && is_tmpfs) {
+    //syslog(LOG_INFO, "already a tmpfs mountpoint: %s\n", dir, strerror(errno));
+    return -2;
+  }
+
   return 0;
 }
 
@@ -67,8 +109,7 @@ int suitable_mountpoint(char *dir, struct stat *sb, struct statfs *sf) {
 #define GB (1024*1024*1024L)
 int query_ramdisk(void) {
   struct stat sb; struct statfs sf;
-  if (suitable_mountpoint(ramdisk, &sb, &sf) == -1) return -1;
-  if (sf.f_type != TMPFS_MAGIC) {
+  if (suitable_mountpoint(ramdisk, &sb, &sf) != -2) {
     printf("%s: not a ramdisk\n", ramdisk);
     return -1;
   }
@@ -84,8 +125,7 @@ int query_ramdisk(void) {
 
 int unmount_ramdisk(void) {
   struct stat sb; struct statfs sf;
-  if (suitable_mountpoint(ramdisk, &sb, &sf) == -1) return -1;
-  if (sf.f_type != TMPFS_MAGIC) {
+  if (suitable_mountpoint(ramdisk, &sb, &sf) != -2) {
     syslog(LOG_ERR,"%s: not a ramdisk\n", ramdisk);
     return -1;
   }
@@ -97,23 +137,17 @@ int unmount_ramdisk(void) {
 }
 
 int create_ramdisk(void) {
-  int rc=-1;
+  int rc;
   char opts[100];
 
   struct stat sb; struct statfs sf;
-  if (suitable_mountpoint(ramdisk, &sb, &sf) == -1) goto done;
-  if (sf.f_type == TMPFS_MAGIC) { rc=1; goto done; } /* already a ramdisk? */
+  rc = suitable_mountpoint(ramdisk, &sb, &sf);
+  if (rc) return rc;
 
   /* ok, mount a ramdisk on this point */
   snprintf(opts,sizeof(opts),"size=%s",sz);
-  if ( (rc=mount("unused", ramdisk, "tmpfs", MS_NOATIME|MS_NODEV, opts))==-1) {
-    syslog(LOG_ERR, "can't make ramdisk %s: %s\n", ramdisk, strerror(errno));
-  }
-
- done:
-  if (rc == 0) syslog(LOG_INFO,"mounted ramdisk %s (size %s)\n", ramdisk, sz);
-  else if (rc == 1) syslog(LOG_INFO,"ramdisk %s exists\n", ramdisk);
-  else if (rc == -1) syslog(LOG_ERR,"failed to make ramdisk %s\n", ramdisk);
+  rc=mount("none", ramdisk, "tmpfs", MS_NOATIME|MS_NODEV, opts);
+  if (rc) syslog(LOG_ERR, "can't make ramdisk %s: %s\n", ramdisk, strerror(errno));
   return rc;
 }
 
