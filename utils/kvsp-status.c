@@ -241,6 +241,7 @@ void udp_status(UT_array *dirs) {
   }
 
  done:
+  if (fd != -1) close(fd);
   utstring_free(s);
   return;
 }
