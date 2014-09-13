@@ -7,8 +7,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <ifaddrs.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,6 +27,8 @@ in_addr_t addr;
 int port; 
 char *iface; // used for multicast with explicitly specified nic
 int interval=10; /* udp report interval (seconds) */
+char hostname[255];  /* used for udp reporting */
+char *iface_addr_str = "0.0.0.0";  /* gets filled out with eth0's IP if they use the @eth0 multicast egress syntax */
 
 void usage(char *prog) {
   fprintf(stderr, "display mode:  %s [-v] spool ...\n", prog);
@@ -144,7 +149,7 @@ void udp_status(UT_array *dirs) {
 
   UT_string *s;
   utstring_new(s);
-  utstring_printf(s,"kvsp-status\n");
+  utstring_printf(s,"kvsp-status %s %s\n", hostname, iface_addr_str);
 
   dir=NULL;
   while ( (dir=(char**)utarray_next(dirs,dir))) {
@@ -154,23 +159,13 @@ void udp_status(UT_array *dirs) {
       goto done; 
     }
     long lz = stats.spool_sz;
-    char *unit = "";
-    if      (lz > 1024*1024*1024){unit="gb"; lz/=(1024*1024*1024); }
-    else if (lz > 1024*1024)     {unit="mb"; lz/=(1024*1024);      }
-    else if (lz > 1024)          {unit="kb"; lz/=(1024);           }
-    else                         {unit="b";                        }
     utstring_printf(s,"%s ", *dir);
-    utstring_printf(s,"%u%% ", stats.pct_consumed);
-    utstring_printf(s,"%lu%s ", (long)lz, unit);
-    unit="";
+    utstring_printf(s,"%u ", stats.pct_consumed);
+    utstring_printf(s,"%lu ", (long)lz);
     time_t now = time(NULL);
     time_t elapsed =  now - stats.last_write;
-    if      (elapsed > 60*60*24) {unit="days";  elapsed/=(60*60*24);}
-    else if (elapsed > 60*60)    {unit="hours"; elapsed/=(60*60);   }
-    else if (elapsed > 60)       {unit="mins";  elapsed/=(60);      }
-    else if (elapsed >= 0)       {unit="secs";                      }
-    if (stats.last_write == 0)   utstring_printf(s,"never\n");
-    else utstring_printf(s,"%lu%s\n", (long)elapsed, unit);
+    if (stats.last_write == 0) utstring_printf(s,"-1\n");
+    else utstring_printf(s,"%lu\n", (long)elapsed);
   }
   char *buf = utstring_body(s);
   int len = utstring_len(s);
@@ -202,6 +197,8 @@ void udp_status(UT_array *dirs) {
     struct in_addr iface_addr;
     if (ioctl(fd, SIOCGIFADDR, &ifr)) {fprintf(stderr,"ioctl: %s\n", strerror(errno)); goto done;} 
     iface_addr = (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+    char *volatile_str = inet_ntoa(iface_addr);
+    iface_addr_str = strdup(volatile_str);
 
     /* ask kernel to use its IP address for outgoing multicast */
     if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &iface_addr, sizeof(iface_addr))) {
@@ -263,6 +260,7 @@ int main(int argc, char * argv[]) {
   }
   if (optind >= argc) usage(argv[0]);
   while(optind < argc) utarray_push_back(dirs, &argv[optind++]);
+  gethostname(hostname,sizeof(hostname));
 
   switch(mode) {
     case console:
