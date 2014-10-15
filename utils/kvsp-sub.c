@@ -9,21 +9,47 @@
 #include "kvspool_internal.h"
 #include "utstring.h"
 #include "uthash.h"
+#include "utarray.h"
 
 void *sp;
 
 int verbose;
 int pull_mode;
 char *dir;
-
+char *remotes_file;
 void *context;
 void *socket;
 
 
 void usage(char *exe) {
-  fprintf(stderr,"usage: %s [-v] [-s] -d <dir> <pub> [<pub> ...]\n", exe);
+  fprintf(stderr,"usage: %s [-v] [-s] -d <dir> [-f file | <pub> ...]\n", exe);
   fprintf(stderr,"       -s runs in push-pull mode instead of lossy pub-sub\n");
   exit(-1);
+}
+
+int read_lines(char *file, UT_array *lines) {
+  char line[200];
+  int rc = -1;
+  char *c;
+  FILE *f = fopen(file,"r");
+  if (f==NULL) {
+    fprintf(stderr,"fopen %s: %s\n", file, strerror(errno));
+    goto done;
+  }
+  while (fgets(line,sizeof(line),f) != NULL) {
+    for(c=line; (c < line+sizeof(line)) && (*c != '\0'); c++) {
+     if (*c == '\n') *c='\0';
+     if (*c == ' ') *c='\0';
+    }
+    c = line;
+    if (strlen(c) == 0) continue;
+    utarray_push_back(lines,&c);
+  }
+  rc  = 0;
+
+ done:
+  if (f) fclose(f);
+  return rc;
 }
 
 #if ZMQ_VERSION_MAJOR == 2
@@ -63,22 +89,26 @@ int json_to_frame(void *sp, void *set, void *msg_data, size_t msg_len) {
 int main(int argc, char *argv[]) {
 
   zmq_rcvmore_t more; size_t more_sz = sizeof(more);
-  char *exe = argv[0], *filter = "", *pub;
+  char *exe = argv[0], *filter = "";
   int part_num,opt,rc=-1;
   void *msg_data, *sp, *set=NULL;
+  char **endpoint;
+  UT_array *endpoints;
   size_t msg_len;
   zmq_msg_t part;
 
-  while ( (opt = getopt(argc, argv, "sd:v+")) != -1) {
+  utarray_new(endpoints,&ut_str_icd);
+
+  while ( (opt = getopt(argc, argv, "sd:f:v+")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
       case 's': pull_mode++; break;
       case 'd': dir=strdup(optarg); break;
+      case 'f': remotes_file=strdup(optarg); break;
       default: usage(exe); break;
     }
   }
   if (!dir) usage(exe);
-  if (optind >= argc) usage(exe);
 
   sp = kv_spoolwriter_new(dir);
   if (!sp) usage(exe);
@@ -87,9 +117,13 @@ int main(int argc, char *argv[]) {
   /* connect socket to each publisher. yes, zeromq lets you connect n times */
   if ( !(context = zmq_init(1))) goto done;
   if ( !(socket = zmq_socket(context, pull_mode?ZMQ_PULL:ZMQ_SUB))) goto done;
-  while (optind < argc) {
-    pub = argv[optind++];
-    if (zmq_connect(socket, pub)) goto done;
+  if (remotes_file) if (read_lines(remotes_file,endpoints)) goto done;
+  while (optind < argc) utarray_push_back(endpoints,&argv[optind++]);
+  endpoint=NULL;
+  if (utarray_len(endpoints) == 0) usage(argv[0]);
+  while ( (endpoint=(char**)utarray_next(endpoints,endpoint))) {
+    if (verbose) fprintf(stderr,"connecting to %s\n", *endpoint);
+    if (zmq_connect(socket, *endpoint)) goto done;
   }
   if (!pull_mode) {
     if (zmq_setsockopt(socket, ZMQ_SUBSCRIBE, filter, strlen(filter))) goto done;
@@ -128,6 +162,7 @@ int main(int argc, char *argv[]) {
   if(context) zmq_term(context);
   kv_spoolwriter_free(sp);
   if (set) kv_set_free(set);
+  utarray_free(endpoints);
   return rc;
 }
 
