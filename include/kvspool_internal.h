@@ -11,7 +11,7 @@
 #define KVSPOOL_MAGIC "KV+SPOOL"
 
 /* (reader): scan for new readable spools when > x seconds elapse */
-#define KVSPOOL_RESCAN_INTERVAL 10    /* seconds */
+#define KVSPOOL_RESCAN_INTERVAL 1    /* seconds */
 
 /* (writer) attrition as needed to keep the total spool size approx under x */
 /* 1 GB is a default but this can be configured using the 'limits' file. */

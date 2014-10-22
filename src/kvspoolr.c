@@ -13,7 +13,7 @@
 #include "utstring.h"
 #include "tpl.h"
 
-#define INTERNAL_RESCAN_INTERVAL_SEC (10)
+#define INTERNAL_RESCAN_INTERVAL_SEC (1)
 
 typedef struct {
   char *srpath; /* e.g. /tmp/myspool/spool.123456789.999-000.sr */

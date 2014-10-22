@@ -70,7 +70,7 @@ void mark_writable() {
   UT_string **s=NULL;
   while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
     s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
-    i=(int*)utarray_next(cfg.outidxs,s);        assert(i);
+    i=(int*)utarray_next(cfg.outidxs,i);        assert(i);
     if (utstring_len(*s) > *i) mod_epoll(EPOLLIN|EPOLLOUT, *fd);
   }
 }
@@ -168,7 +168,7 @@ void shift_buffers() {
 
   while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
     s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
-    i=(int*)utarray_next(cfg.outidxs,s);        assert(i);
+    i=(int*)utarray_next(cfg.outidxs,i);        assert(i);
     len = utstring_len(*s);
     if (*i == 0) continue; // nothing to shift 
 
