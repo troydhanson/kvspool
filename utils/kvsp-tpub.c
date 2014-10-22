@@ -34,6 +34,7 @@ struct {
   int mb_per_client;
   UT_array *clients;
   UT_array *outbufs;
+  UT_array *outidxs;
   int rr_idx;
   UT_string *s; // scratch
 } cfg = {
@@ -59,16 +60,18 @@ void discard_client_buffers(int pos) {
   UT_string **s = (UT_string**)utarray_eltptr(cfg.outbufs,pos);
   utstring_free(*s);                // deep free string 
   utarray_erase(cfg.outbufs,pos,1); // erase string pointer
+  utarray_erase(cfg.outidxs,pos,1); // erase write index
   utarray_erase(cfg.clients,pos,1); // erase client descriptor
 }
 
 void mark_writable() {
   /* mark writability-interest for any clients with pending output */
-  int *fd=NULL;
+  int *fd=NULL, *i=NULL;
   UT_string **s=NULL;
   while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
     s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
-    if (utstring_len(*s)) mod_epoll(EPOLLIN|EPOLLOUT, *fd);
+    i=(int*)utarray_next(cfg.outidxs,s);        assert(i);
+    if (utstring_len(*s) > *i) mod_epoll(EPOLLIN|EPOLLOUT, *fd);
   }
 }
 
@@ -156,6 +159,26 @@ void append_to_client_buf(UT_string *f) {
   }
 }
 
+// periodically we shift the output buffers down
+// to reclaim the already written output regions
+void shift_buffers() {
+  int *fd=NULL, *i=NULL;
+  UT_string **s=NULL;
+  size_t len;
+
+  while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
+    s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
+    i=(int*)utarray_next(cfg.outidxs,s);        assert(i);
+    len = utstring_len(*s);
+    if (*i == 0) continue; // nothing to shift 
+
+    assert(*i > 0);
+    memmove((*s)->d, (*s)->d + *i, len-*i);
+    (*s)->i -= *i;
+    *i = 0;
+  }
+}
+
 /* used to stop reading the spool when internal buffers are 90% full */
 int have_capacity() {
   size_t max = utarray_len(cfg.outbufs) * cfg.mb_per_client * (1024*1024);
@@ -168,6 +191,7 @@ int have_capacity() {
 
 int periodic_work() {
   int rc = -1, kc;
+  shift_buffers();
 
   while (have_capacity()) {
     kc = kv_spool_read(cfg.sp,cfg.set,0);
@@ -219,7 +243,7 @@ int setup_client_listener() {
 
 /* flush as much pending output to the client as it can handle. */
 void feed_client(int ready_fd, int events) {
-  int *fd=NULL, rc, pos, rv;
+  int *fd=NULL, rc, pos, rv, *p;
   char *buf, tmp[100];
   size_t len;
   UT_string **s=NULL;
@@ -249,8 +273,9 @@ void feed_client(int ready_fd, int events) {
   if ((events & EPOLLOUT) == 0) return;
 
   /* send the pending buffer to the client */
-  buf = utstring_body(*s);
-  len = utstring_len(*s); assert(len);
+  p = (int*)utarray_eltptr(cfg.outidxs,pos);
+  buf = utstring_body(*s) + *p;
+  len = utstring_len(*s)  - *p;
   rc = send(*fd, buf, len, MSG_DONTWAIT);
   if (cfg.verbose) fprintf(stderr,"sent %d/%d bytes\n", rc, (int)len);
 
@@ -263,11 +288,11 @@ void feed_client(int ready_fd, int events) {
     return;
   }
 
-  /* shift the output buffer; we wrote rc bytes TODO noshift */
+  /* advance output index in the output buffer; we wrote rc bytes */
   if (rc < len) {
-    memmove((*s)->d, (*s)->d + rc, len-rc);
-    (*s)->i -= rc;
+    *p += rc;
   } else {
+    *p = 0;
     utstring_clear(*s);     // buffer emptied
     mod_epoll(EPOLLIN,*fd); // remove EPOLLOUT 
   }
@@ -329,7 +354,7 @@ int handle_signal() {
 }
 
 int accept_client() {
-  int rc = -1;
+  int rc=-1, i=0;
 
   struct sockaddr_in cin;
   socklen_t cin_sz = sizeof(cin);
@@ -344,6 +369,7 @@ int accept_client() {
   /* set up client output buffer. reserve space for full buffer */
   UT_string *s; utstring_new(s); utstring_reserve(s,cfg.mb_per_client*1024*1024); 
   utarray_push_back(cfg.outbufs,&s);
+  utarray_push_back(cfg.outidxs,&i);
   new_epoll(EPOLLIN, fd);
 
   rc=0;
@@ -357,6 +383,7 @@ int main(int argc, char *argv[]) {
   cfg.prog = argv[0];
   utarray_new(cfg.clients,&ut_int_icd);
   utarray_new(cfg.outbufs,&ut_ptr_icd);
+  utarray_new(cfg.outidxs, &ut_int_icd);
   cfg.set = kv_set_new();
   struct epoll_event ev;
   UT_string **s;
@@ -413,7 +440,6 @@ int main(int argc, char *argv[]) {
 
   alarm(1);
   while (epoll_wait(cfg.epoll_fd, &ev, 1, -1) > 0) {
-
     if (cfg.verbose > 1)  fprintf(stderr,"epoll reports fd %d\n", ev.data.fd);
     if      (ev.data.fd == cfg.signal_fd)   { if (handle_signal() < 0) goto done; }
     else if (ev.data.fd == cfg.listener_fd) { if (accept_client() < 0) goto done; }
@@ -430,6 +456,7 @@ done:
   }
   utarray_free(cfg.clients);
   utarray_free(cfg.outbufs);
+  utarray_free(cfg.outidxs);
   utarray_free(output_keys);
   utarray_free(output_defaults);
   utarray_free(output_types);
