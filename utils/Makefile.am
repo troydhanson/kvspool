@@ -1,7 +1,7 @@
 AM_CFLAGS = -I.. -I../include
 LIBSPOOL = -L../src -lkvspool
 bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-init kvsp-status \
-               kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub \
+               kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub kvsp-upub \
                ramdisk
 
 kvsp_spr_LDADD = $(LIBSPOOL)
@@ -20,6 +20,7 @@ kvsp_pub_LDADD = $(LIBSPOOL)
 kvsp_sub_LDADD = $(LIBSPOOL)
 kvsp_concen_LDADD = $(LIBSPOOL)
 kvsp_tpub_LDADD = $(LIBSPOOL)
+kvsp_upub_LDADD = $(LIBSPOOL)
 
 kvsp_bpub_SOURCES = kvsp-bpub.c kvsp-bconfig.c
 kvsp_bsub_SOURCES = kvsp-bsub.c kvsp-bconfig.c
@@ -40,6 +41,7 @@ kvsp_bsub_LDADD += -lzmq
 if HAVE_JANSSON
 bin_PROGRAMS += kvsp-sub kvsp-pub kvsp-concen
 kvsp_pub_LDADD += -lzmq -ljansson
+kvsp_upub_LDADD += -lzmq -ljansson
 kvsp_sub_LDADD += -lzmq -ljansson
 kvsp_concen_LDADD += -lzmq -ljansson
 endif
@@ -62,3 +64,4 @@ kvsp_npub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_nsub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_concen_DEPENDENCIES = ../src/libkvspool.a
 kvsp_tpub_DEPENDENCIES = ../src/libkvspool.a
+kvsp_upub_DEPENDENCIES = ../src/libkvspool.a
