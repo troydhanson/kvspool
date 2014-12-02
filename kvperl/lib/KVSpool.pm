@@ -122,7 +122,7 @@ None by default.
 
 =head1 SEE ALSO
 
-See http://tkhanson.net/kvspool
+See http://troydhanson.github.io
 
 =head1 AUTHOR
 
