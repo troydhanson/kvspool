@@ -3,8 +3,6 @@ kvspool: a tool for data streams
 Troy D. Hanson <tdh@tkhanson.net>
 v0.9, April 2014
 
-include::twitter.txt[]
-
 kv-spool ("key-value" spool):: 
          a Linux-based C library, with Perl, Python and Java bindings, to stream data
          between programs as key-value dictionaries. The data stream is backed to disk,
@@ -140,11 +138,9 @@ License
 ~~~~~~~
 See the link:LICENSE.txt[LICENSE.txt] file. Kvspool is free and open source.
 
-Resources & Help 
-~~~~~~~~~~~~~~~~
-You can ask questions to the author @troydhanson or tdh@tkhanson.net. (Sorry if I'm
-behind or unable to answer!) Additional software by the author is cataloged at
-http://troydhanson.github.io/.
+Resources 
+~~~~~~~~~
+Additional software by the author is cataloged at http://troydhanson.github.io/.
 
 Getting kvspool
 ---------------
