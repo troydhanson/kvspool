@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.7" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>kvspool: a tool for data streams</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -87,9 +87,15 @@ ul, ol, li > p {
 ul > li     { color: #aaa; }
 ul > li > * { color: black; }
 
-pre {
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
   padding: 0;
   margin: 0;
+}
+pre {
+  white-space: pre-wrap;
 }
 
 #author {
@@ -219,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -415,12 +421,6 @@ div.unbreakable { page-break-inside: avoid; }
  *
  * */
 
-tt {
-  font-family: "Courier New", Courier, monospace;
-  font-size: inherit;
-  color: navy;
-}
-
 div.tableblock {
   margin-top: 1.0em;
   margin-bottom: 1.5em;
@@ -453,12 +453,6 @@ div.tableblock > table[frame="vsides"] {
  * html5 specific
  *
  * */
-
-.monospaced {
-  font-family: "Courier New", Courier, monospace;
-  font-size: inherit;
-  color: navy;
-}
 
 table.tableblock {
   margin-top: 1.0em;
@@ -539,6 +533,8 @@ body.manpage div.sectionbody {
 @media print {
   body.manpage div#toc { display: none; }
 }
+
+
 @media screen {
   body {
     max-width: 50em; /* approximately 80 characters wide */
@@ -773,7 +769,7 @@ asciidoc.install(2);
 <div id="header">
 <h1>kvspool: a tool for data streams</h1>
 <span id="author">Troy D. Hanson</span><br />
-<span id="email"><tt>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</tt></span><br />
+<span id="email"><code>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</code></span><br />
 <span id="revnumber">version 0.9,</span>
 <span id="revdate">April 2014</span>
 <div id="toc">
@@ -784,10 +780,6 @@ asciidoc.install(2);
 <div id="content">
 <div id="preamble">
 <div class="sectionbody">
-<div style="float:right">
-<a href="https://twitter.com/share" class="twitter-share-button" data-via="troydhanson">Tweet</a>
-<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
-</div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 kv-spool ("key-value" spool)
@@ -854,8 +846,8 @@ requirement is that we don&#8217;t fill up the disk.  So, when we make a spool d
 tell kvspool what its maximum size should be:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% mkdir spool
-% kvsp-init -s 1G spool</tt></pre>
+<pre><code>% mkdir spool
+% kvsp-init -s 1G spool</code></pre>
 </div></div>
 <div class="paragraph"><p>This configures a maximum of 1 GB of data in the spool. After it reaches that size, it
 stays that size, by deleting old data as new data comes into the spool. Deletion is
@@ -867,7 +859,7 @@ it&#8217;d be necessary to block the writer or use unbounded disk space.</p></di
 <div class="sect2">
 <h3 id="_shared_memory_i_o">Shared memory I/O</h3>
 <div class="paragraph"><p>You can locate a spool on a RAM disk if you want the speed of shared memory without true
-disk persistence- kvspool comes with a <tt>ramdisk</tt> utility to make one.</p></div>
+disk persistence- kvspool comes with a <code>ramdisk</code> utility to make one.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_rewind_and_replay">Rewind and replay</h3>
@@ -876,7 +868,7 @@ time when kvspool deletes it to make room for new data. This is the basis for a 
 "rewind and replay" feature:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% kvsp-rewind spool</tt></pre>
+<pre><code>% kvsp-rewind spool</code></pre>
 </div></div>
 <div class="paragraph"><p>After a rewind, reading starts at the beginning of the spool. The reader should be
 restarted for this to take effect. Rewind and replay is a convenient way to develop a
@@ -888,7 +880,7 @@ program on a consistent source of test data.</p></div>
 environment, rewind it, and use it as a consistent source of test data.</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% cp -r spool snapshot</tt></pre>
+<pre><code>% cp -r spool snapshot</code></pre>
 </div></div>
 <div class="paragraph"><p>Copying a spool of production data lets you develop programs on real data but without
 needing a writer present- the data has been "canned".</p></div>
@@ -898,18 +890,18 @@ needing a writer present- the data has been "canned".</p></div>
 <div class="paragraph"><p>You can also publish a spool over the network, like this:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% kvsp-pub -d spool tcp://192.168.1.9:1110</tt></pre>
+<pre><code>% kvsp-pub -d spool tcp://192.168.1.9:1110</code></pre>
 </div></div>
 <div class="paragraph"><p>Now, on the remote computers where you wish to subscribe to the spool, run:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110</tt></pre>
+<pre><code>% kvsp-sub -d spool tcp://192.168.1.9:1110</code></pre>
 </div></div>
-<div class="paragraph"><p>If you give multiple addresses to <tt>kvsp-sub</tt>, it connects to all of them and concentrates
+<div class="paragraph"><p>If you give multiple addresses to <code>kvsp-sub</code>, it connects to all of them and concentrates
 their published output into a single spool.</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111</tt></pre>
+<pre><code>% kvsp-sub -d spool tcp://192.168.1.9:1110 tcp://192.168.1.10:1111</code></pre>
 </div></div>
 <div class="paragraph"><p>Kvspool includes a few kinds of replication utilities described <a href="#net_utilities">below</a>.</p></div>
 <div class="sidebarblock">
@@ -917,11 +909,11 @@ their published output into a single spool.</p></div>
 <div class="title">The big picture</div>
 <div class="paragraph"><p>Before moving on- let&#8217;s take a deep breath and recap. With kvspool, the writer
 is unaware of whether network replication is taking place. The writer just writes
-to the local spool. We run the <tt>kvsp-pub</tt> utility in the background; as data
+to the local spool. We run the <code>kvsp-pub</code> utility in the background; as data
 comes into the spool, it transmits it on the network.</p></div>
-<div class="paragraph"><p>On the other computer- the receiving side- we run <tt>kvsp-sub</tt> in the background.
+<div class="paragraph"><p>On the other computer- the receiving side- we run <code>kvsp-sub</code> in the background.
 It receives the network transmissions, and writes them to its local spool.</p></div>
-<div class="paragraph"><p>Use <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> to maintain a live, continuous replication. As
+<div class="paragraph"><p>Use <code>kvsp-pub</code> and <code>kvsp-sub</code> to maintain a live, continuous replication. As
 data is written to the source spool, it just "shows up" in the remote spool.
 The reader and writer are completely uninvolved in the replication process.</p></div>
 </div></div>
@@ -934,7 +926,7 @@ The reader and writer are completely uninvolved in the replication process.</p><
 <div class="title">Tip</div>
 </td>
 <td class="content">A job manager such as the author&#8217;s <a href="http://troydhanson.github.com/pmtr/">pmtr process
-monitor</a> can be used to run <tt>kvsp-sub</tt> and <tt>kvsp-pub</tt> in the background, and restart
+monitor</a> can be used to run <code>kvsp-sub</code> and <code>kvsp-pub</code> in the background, and restart
 them when the system reboots.</td>
 </tr></table>
 </div>
@@ -944,10 +936,8 @@ them when the system reboots.</td>
 <div class="paragraph"><p>See the <a href="LICENSE.txt">LICENSE.txt</a> file. Kvspool is free and open source.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_resources_amp_help">Resources &amp; Help</h3>
-<div class="paragraph"><p>You can ask questions to the author @troydhanson or <a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>. (Sorry if I&#8217;m
-behind or unable to answer!) Additional software by the author is cataloged at
-<a href="http://troydhanson.github.io/">http://troydhanson.github.io/</a>.</p></div>
+<h3 id="_resources">Resources</h3>
+<div class="paragraph"><p>Additional software by the author is cataloged at <a href="http://troydhanson.github.io/">http://troydhanson.github.io/</a>.</p></div>
 </div>
 </div>
 </div>
@@ -957,20 +947,20 @@ behind or unable to answer!) Additional software by the author is cataloged at
 <div class="paragraph"><p>You can clone kvspool from github:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% git clone git://github.com/troydhanson/kvspool.git</tt></pre>
+<pre><code>% git clone git://github.com/troydhanson/kvspool.git</code></pre>
 </div></div>
 <div class="paragraph"><p>To build kvspool:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% cd kvspool</tt></pre>
+<pre><code>% cd kvspool</code></pre>
 </div></div>
-<div class="paragraph"><p>If the <em>configure</em> script does not yet exist, run <tt>./bootstrap</tt>.  If you want to build the
+<div class="paragraph"><p>If the <em>configure</em> script does not yet exist, run <code>./bootstrap</code>.  If you want to build the
 network replication utilities, make sure you have <strong>Jansson</strong> and <strong>ZeroMQ</strong> (2.x or 3.x).</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>% ./configure
+<pre><code>% ./configure
 % make
-% sudo make install</tt></pre>
+% sudo make install</code></pre>
 </div></div>
 <div class="paragraph"><p>This builds and installs the C library and utilities, and if the prerequisite packages
 are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based utilities.</p></div>
@@ -996,50 +986,50 @@ cellspacing="0" cellpadding="4">
 </thead>
 <tbody>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-init</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-init -s 1G spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-init</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-init -s 1G spool</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-status</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-status spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-status</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-status spool</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-rewind</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-rewind spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-rewind</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-rewind spool</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-tee</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-tee -s spool copy1 copy2</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-tee</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-tee -s spool copy1 copy2</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-concen</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-concen -d spool1 -d spool2 spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-concen</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-concen -d spool1 -d spool2 spool</code></p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<div class="paragraph"><p>The <tt>kvsp-init</tt> command is used when a spool directory is first created, to set
-the maximum capacity of the spool. It accepts k/m/g/t suffixes. If <tt>kvsp-init</tt> is
+<div class="paragraph"><p>The <code>kvsp-init</code> command is used when a spool directory is first created, to set
+the maximum capacity of the spool. It accepts k/m/g/t suffixes. If <code>kvsp-init</code> is
 run later, after the spool already exists and has data, it is resized.</p></div>
-<div class="paragraph"><p>Run <tt>kvsp-status</tt> to see what percentage of the spool has been consumed by a reader. It
+<div class="paragraph"><p>Run <code>kvsp-status</code> to see what percentage of the spool has been consumed by a reader. It
 can take multiple spools as arguments. For each spool it prints a line like:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>/tmp/spool            99%        877kb         28secs</tt></pre>
+<pre><code>/tmp/spool            99%        877kb         28secs</code></pre>
 </div></div>
 <div class="paragraph"><p>The fields show what percentage of the spool has been read, how much data is currently in
 the spool, and how recently data was written into the spool.</p></div>
-<div class="paragraph"><p>The <tt>kvsp-rewind</tt> command resets the reader position to the beginning (oldest frame) in the
+<div class="paragraph"><p>The <code>kvsp-rewind</code> command resets the reader position to the beginning (oldest frame) in the
 spool. Use this command in order to "replay" the spooled data. Disconnect (terminate) any
 readers before running this command.</p></div>
-<div class="paragraph"><p>Use <tt>kvsp-tee</tt> to support multiple readers from one input spool. First make a separate
-spool directory for each reader (and use <tt>kvsp-init</tt> to set the capacity of each one);
-then use <tt>kvsp-tee</tt> as the reader on the source spool. It maintains a continuous copy of
+<div class="paragraph"><p>Use <code>kvsp-tee</code> to support multiple readers from one input spool. First make a separate
+spool directory for each reader (and use <code>kvsp-init</code> to set the capacity of each one);
+then use <code>kvsp-tee</code> as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
 maintain the tee.</p></div>
-<div class="paragraph"><p>The <tt>kvsp-concen</tt> utility is the opposite of <tt>kvsp-tee</tt>. It takes multiple source
+<div class="paragraph"><p>The <code>kvsp-concen</code> utility is the opposite of <code>kvsp-tee</code>. It takes multiple source
 spools and makes a single output spool from them. It is a spool concentrator. The
-source spools are flagged with <tt>-d spool</tt> and the final argument is the output spool.</p></div>
+source spools are flagged with <code>-d spool</code> and the final argument is the output spool.</p></div>
 </div>
 <div class="sect2">
 <h3 id="net_utilities">Network utilities</h3>
@@ -1058,24 +1048,24 @@ cellspacing="0" cellpadding="4">
 </thead>
 <tbody>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-pub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-pub -d spool tcp://192.168.1.9:1110</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-pub</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-pub -d spool tcp://192.168.1.9:1110</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-sub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-sub -d spool tcp://192.168.1.9:1110</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-sub</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-sub -d spool tcp://192.168.1.9:1110</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-bpub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-bpub -b cast.cfg -d spool tcp://192.168.1.9:2110</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-bpub</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-bpub -b cast.cfg -d spool tcp://192.168.1.9:2110</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-bsub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-bsub -b cast.cfg -d spool tcp://192.168.1.9:2110</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-bsub</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-bsub -b cast.cfg -d spool tcp://192.168.1.9:2110</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-tpub</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-tpub -b cast.cfg -d spool -p 2110</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-tpub</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-tpub -b cast.cfg -d spool -p 2110</code></p></td>
 </tr>
 </tbody>
 </table>
@@ -1083,11 +1073,11 @@ cellspacing="0" cellpadding="4">
 <div class="paragraph"><p>The network utilities keep a local spool continuously replicated to a remote spool.</p></div>
 <div class="sect3">
 <h4 id="_kvsp_pub_kvsp_sub">kvsp-pub/kvsp-sub</h4>
-<div class="paragraph"><p>The utilities <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> exist to publish a source spool to a remote spool.
+<div class="paragraph"><p>The utilities <code>kvsp-pub</code> and <code>kvsp-sub</code> exist to publish a source spool to a remote spool.
 This pair of utilities communicates in JSON over ZeroMQ.  The publisher listens on the
 specified TCP port. The subscriber connects to it.  If more than one subscriber connects,
 each receives a copy of the data. When no subscribers are connected, the publisher drops
-data. However, when the <tt>-s</tt> flag is given to both <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt>, two things
+data. However, when the <code>-s</code> flag is given to both <code>kvsp-pub</code> and <code>kvsp-sub</code>, two things
 change: the publisher queues data when waiting for a subscriber instead of dropping it;
 and secondly, if more than one subscriber connects, the data gets divided among them
 rather than duplicated to all of them.</p></div>
@@ -1096,29 +1086,29 @@ simply by listing multiple ZeroMQ endpoints on the command line.</p></div>
 </div>
 <div class="sect3">
 <h4 id="_kvsp_bpub_kvsp_bsub">kvsp-bpub/kvsp-bsub</h4>
-<div class="paragraph"><p>The <tt>kvsp-bpub</tt> and <tt>kvsp-bsub</tt> utilities implement binary-over-ZeroMQ replication. Their
-usage is the same as <tt>kvsp-pub</tt> and <tt>kvsp-sub</tt> except the required <tt>-b cast.cfg</tt> argument.
-This file lists the binary data type for each required key. Here&#8217;s an example <tt>cast.cfg</tt>:</p></div>
+<div class="paragraph"><p>The <code>kvsp-bpub</code> and <code>kvsp-bsub</code> utilities implement binary-over-ZeroMQ replication. Their
+usage is the same as <code>kvsp-pub</code> and <code>kvsp-sub</code> except the required <code>-b cast.cfg</code> argument.
+This file lists the binary data type for each required key. Here&#8217;s an example <code>cast.cfg</code>:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>i32 timestamp
+<pre><code>i32 timestamp
 str sensor_name
-i8 temp</tt></pre>
+i8 temp</code></pre>
 </div></div>
 <div class="paragraph"><p>In this example, every dictionary in the source spool is expected to have three keys
 (timestamp, sensor_name and temp); any other keys get ignored. Their values are parsed
 to the binary types listed (i32, str and i8). The binary buffer is transmitted
 without any keys. On the receiving subscriber, the binary is unpacked using the same file.
 The reason for using binary publishing is speed- it&#8217;s often an order of magnitude faster.
-These data types may appear in <tt>cast.cfg</tt></p></div>
+These data types may appear in <code>cast.cfg</code></p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>i8        //  byte (8-bit int)
+<pre><code>i8        //  byte (8-bit int)
 i16       //  short (16-bit int)
 i32       //  integer (32-bit int)
 ipv4      //  dotted quad IP address
 str       //  string
-d64       //  double (64-bit float)</tt></pre>
+d64       //  double (64-bit float)</code></pre>
 </div></div>
 </div>
 <div class="sect3">
@@ -1148,49 +1138,49 @@ cellspacing="0" cellpadding="4">
 </thead>
 <tbody>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-spr</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-spr -B 0 spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-spr</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-spr -B 0 spool</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-spw</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-spw -i 10 spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-spw</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-spw -i 10 spool</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-mod</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-mod -k key -o spool2 spool</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-mod</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-mod -k key -o spool2 spool</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>kvsp-speed</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>kvsp-speed</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-speed</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-speed</code></p></td>
 </tr>
 <tr>
-<td align="left" valign="top"><p class="table"><tt>ramdisk</tt></p></td>
-<td align="left" valign="top"><p class="table"><tt>ramdisk -c -s 1G /mnt/ramdisk</tt></p></td>
+<td align="left" valign="top"><p class="table"><code>ramdisk</code></p></td>
+<td align="left" valign="top"><p class="table"><code>ramdisk -c -s 1G /mnt/ramdisk</code></p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<div class="paragraph"><p>The <tt>kvsp-spr</tt> utility is used to manually read a spool and print its frames to the
+<div class="paragraph"><p>The <code>kvsp-spr</code> utility is used to manually read a spool and print its frames to the
 screen. Normally it will block waiting for data once it reaches the end of the spool but
-the <tt>-B 0</tt> (no-block) option tells it to stop reading if the end of the spool is reached.</p></div>
-<div class="paragraph"><p>The <tt>kvsp-spw</tt> utility is used only for testing; it writes a frame of data to the spool
-(or several frames if the <tt>-i</tt> option is used with a count); in the latter mode there is a
-sleep (delay) between each frame, which can be adjusted using the <tt>-d &lt;seconds&gt;</tt> option.</p></div>
-<div class="paragraph"><p>The <tt>kvsp-mod</tt> command "obfuscates" selected values from a source spool to hash values
-in the output spool (named with the <tt>-o</tt> option). For each key named with the <tt>-k</tt> flag,
+the <code>-B 0</code> (no-block) option tells it to stop reading if the end of the spool is reached.</p></div>
+<div class="paragraph"><p>The <code>kvsp-spw</code> utility is used only for testing; it writes a frame of data to the spool
+(or several frames if the <code>-i</code> option is used with a count); in the latter mode there is a
+sleep (delay) between each frame, which can be adjusted using the <code>-d &lt;seconds&gt;</code> option.</p></div>
+<div class="paragraph"><p>The <code>kvsp-mod</code> command "obfuscates" selected values from a source spool to hash values
+in the output spool (named with the <code>-o</code> option). For each key named with the <code>-k</code> flag,
 its value in the output spool is replaced with a mathematical hash.  The hash numbers
 preserve consistency (so the same input value produces the same output value) but the
 value itself is a meaningless number.</p></div>
-<div class="paragraph"><p>A simple benchmark is performed by the <tt>kvsp-speed</tt> utility to measure read and write
+<div class="paragraph"><p>A simple benchmark is performed by the <code>kvsp-speed</code> utility to measure read and write
 performance.</p></div>
-<div class="paragraph"><p>The <tt>ramdisk</tt> utility creates, queries or unmounts a ramdisk- a Linux tmpfs filesystem.
-In the form shown in the table above it creates a 1G ramdisk on the <tt>/mnt/ramdisk</tt> mount
+<div class="paragraph"><p>The <code>ramdisk</code> utility creates, queries or unmounts a ramdisk- a Linux tmpfs filesystem.
+In the form shown in the table above it creates a 1G ramdisk on the <code>/mnt/ramdisk</code> mount
 point (this directory must already exist). A ramdisk created this way will appear in the
-<tt>/proc/mounts</tt> listing. If a ramdisk already exists on that mount point, the command does
-nothing.  In create (<tt>-c</tt>) mode, the <tt>-d &lt;dir&gt;</tt> option may be used one or more times to
-specify (as absolute paths) directories to create within the ramdisk.  Using <tt>ramdisk -u
-/mnt/ramdisk</tt> unmounts it.  The <tt>-q</tt> option queries a directory to see if its a ramdisk
-and show its size.  The <tt>ramdisk</tt> utility is included with kvspool because it is often
+<code>/proc/mounts</code> listing. If a ramdisk already exists on that mount point, the command does
+nothing.  In create (<code>-c</code>) mode, the <code>-d &lt;dir&gt;</code> option may be used one or more times to
+specify (as absolute paths) directories to create within the ramdisk.  Using <code>ramdisk -u
+/mnt/ramdisk</code> unmounts it.  The <code>-q</code> option queries a directory to see if its a ramdisk
+and show its size.  The <code>ramdisk</code> utility is included with kvspool because it is often
 convenient to locate a spool on a ramdisk for performance.</p></div>
 </div>
 </div>
@@ -1210,16 +1200,16 @@ http://www.gnu.org/software/src-highlite -->
 <span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$h</span> <span style="color: #990000">=</span> <span style="color: #FF0000">{</span><span style="color: #FF0000">'day'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Wednesday'</span><span style="color: #990000">,</span> <span style="color: #FF0000">'user'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Troy'</span><span style="color: #FF0000">}</span><span style="color: #990000">;</span>
 <span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">write</span></span><span style="color: #990000">(</span><span style="color: #009900">$h</span><span style="color: #990000">);</span></tt></pre></div></div>
 <div class="paragraph"><p>In Perl the KVSpool object is instantiated with one directory argument. Then every time
-the <tt>write</tt> method is called with a hash reference as argument, it&#8217;s written to the spool.
-To read a spool, use the <tt>read</tt> method which returns a hash reference each times it&#8217;s
+the <code>write</code> method is called with a hash reference as argument, it&#8217;s written to the spool.
+To read a spool, use the <code>read</code> method which returns a hash reference each times it&#8217;s
 called:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>my $h = $v-&gt;read();</tt></pre>
+<pre><code>my $h = $v-&gt;read();</code></pre>
 </div></div>
 <div class="paragraph"><p>The reader is normally blocking (it waits for data if none is immediately available).
-To enact non-blocking mode, use <tt>$v-&gt;{blocking}=0;</tt>, then test the reference returned from
-<tt>read()</tt> using <tt>defined()</tt>. If it&#8217;s not, no data is currently available in the spool.</p></div>
+To enact non-blocking mode, use <code>$v-&gt;{blocking}=0;</code>, then test the reference returned from
+<code>read()</code> using <code>defined()</code>. If it&#8217;s not, no data is currently available in the spool.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_python">Python</h3>
@@ -1232,13 +1222,13 @@ http://www.gnu.org/software/src-highlite -->
 kv <span style="color: #990000">=</span> kvspool<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">Kvspool</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span>
 d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">,</span><span style="color: #FF0000">"user"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Troy"</span><span style="color: #990000">}</span>
 kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>d<span style="color: #990000">)</span></tt></pre></div></div>
-<div class="paragraph"><p>The <tt>write</tt> method takes a dictionary, while the <tt>read</tt> method returns a dictionary:</p></div>
+<div class="paragraph"><p>The <code>write</code> method takes a dictionary, while the <code>read</code> method returns a dictionary:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>d = kv.read()</tt></pre>
+<pre><code>d = kv.read()</code></pre>
 </div></div>
-<div class="paragraph"><p>To enact non-blocking mode on the reader, use <tt>kv.blocking = 0</tt> then test whether the
-object returned from <tt>read()</tt> is <tt>None</tt>. If so, no data is currently available in the spool.</p></div>
+<div class="paragraph"><p>To enact non-blocking mode on the reader, use <code>kv.blocking = 0</code> then test whether the
+object returned from <code>read()</code> is <code>None</code>. If so, no data is currently available in the spool.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_java">Java</h3>
@@ -1256,24 +1246,24 @@ http://www.gnu.org/software/src-highlite -->
     kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>h<span style="color: #990000">);</span>
   <span style="color: #FF0000">}</span>
 <span style="color: #FF0000">}</span></tt></pre></div></div>
-<div class="paragraph"><p>The example first instantiates a <tt>KVJava</tt> object. (You can copy <tt>KVJava.java</tt> from the
-<tt>kvjava</tt> directory into your own source tree; this class loads the underlying JNI-based
+<div class="paragraph"><p>The example first instantiates a <code>KVJava</code> object. (You can copy <code>KVJava.java</code> from the
+<code>kvjava</code> directory into your own source tree; this class loads the underlying JNI-based
 library, which must be built and installed as described below).</p></div>
-<div class="paragraph"><p>To write to the spool, pass a <tt>HashMap&lt;String,String&gt;</tt> to the <tt>write</tt> method. The <tt>read</tt>
+<div class="paragraph"><p>To write to the spool, pass a <code>HashMap&lt;String,String&gt;</code> to the <code>write</code> method. The <code>read</code>
 method is similar:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>HashMap&lt;String,String&gt; m;
-m = kv.read();</tt></pre>
+<pre><code>HashMap&lt;String,String&gt; m;
+m = kv.read();</code></pre>
 </div></div>
-<div class="paragraph"><p>You can put the reader in non-blocking mode by setting <tt>kv.blocking = false;</tt>
-and then test whether the object returned from <tt>read()</tt> is equal to <tt>null</tt>. If so,
+<div class="paragraph"><p>You can put the reader in non-blocking mode by setting <code>kv.blocking = false;</code>
+and then test whether the object returned from <code>read()</code> is equal to <code>null</code>. If so,
 no data is currently available in the spool.</p></div>
 <div class="paragraph"><div class="title">Building the JNI library</div><p>The Java binding is not yet integrated into the main build, so it requires extra steps to
-build. After building kvspool, <tt>cd kvjava</tt> and run <tt>make</tt>. Most likely you will need to
-edit the <tt>kvjava/Makefile</tt> lines where <tt>JNIINC</tt> and <tt>JNILIB</tt> are defined to make it work.
-The result of compilation is <tt>libKVJava.so</tt> which must be manually copied to your choice
-of library directory such as <tt>/usr/local/lib</tt> (You may also need to set <tt>LD_LIBRARY_PATH</tt>
+build. After building kvspool, <code>cd kvjava</code> and run <code>make</code>. Most likely you will need to
+edit the <code>kvjava/Makefile</code> lines where <code>JNIINC</code> and <code>JNILIB</code> are defined to make it work.
+The result of compilation is <code>libKVJava.so</code> which must be manually copied to your choice
+of library directory such as <code>/usr/local/lib</code> (You may also need to set <code>LD_LIBRARY_PATH</code>
 so that the dynamic linker can find this shared library it at runtime).</p></div>
 </div>
 <div class="sect2">
@@ -1294,20 +1284,20 @@ http://www.gnu.org/software/src-highlite -->
 <span style="color: #990000">...</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_set_free</span></span><span style="color: #990000">(</span>set<span style="color: #990000">);</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_spoolwriter_free</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">);</span></tt></pre></div></div>
-<div class="paragraph"><p>In C, a spool is opened for writing by calling <tt>kv_spoolwriter_new</tt> which takes the spool
+<div class="paragraph"><p>In C, a spool is opened for writing by calling <code>kv_spoolwriter_new</code> which takes the spool
 directory as argument. It returns an opaque handle (which you should eventually free with
-<tt>kv_spoolwriter_free</tt>).</p></div>
+<code>kv_spoolwriter_free</code>).</p></div>
 <div class="paragraph"><p>Kvspool provides a data structure that implements a dictionary in C. It is created using
-<tt>kv_set_new</tt> which returns an opaque handle (which should eventually be freed using
-<tt>kv_set_free</tt>). In the meantime, it can be used for the whole lifetime of the program, by
+<code>kv_set_new</code> which returns an opaque handle (which should eventually be freed using
+<code>kv_set_free</code>). In the meantime, it can be used for the whole lifetime of the program, by
 adding key-value pairs to it, writing them out, clearing it, and reusing it over and over.
-To add a key-value pair, use <tt>kv_adds</tt> which takes the set handle, the key and the value.
+To add a key-value pair, use <code>kv_adds</code> which takes the set handle, the key and the value.
 The key and value get <em>copied</em> into the set (the set does not keep a pointer to them).
-To write the set into the spool, call <tt>kv_spool_write</tt> with the spool and set handle.
-To re-use the set, call <tt>kv_set_clear</tt> with the set handle. For debugging you can dump a
-set to stderr using <tt>kv_set_dump(set,stderr)</tt>.</p></div>
-<div class="paragraph"><p>To open a spool for reading, call <tt>kv_spoolreader_new</tt> which takes the spool directory and
-returns an opaque handle to the spool.  Then call <tt>kv_spool_read</tt> to read the spool.</p></div>
+To write the set into the spool, call <code>kv_spool_write</code> with the spool and set handle.
+To re-use the set, call <code>kv_set_clear</code> with the set handle. For debugging you can dump a
+set to stderr using <code>kv_set_dump(set,stderr)</code>.</p></div>
+<div class="paragraph"><p>To open a spool for reading, call <code>kv_spoolreader_new</code> which takes the spool directory and
+returns an opaque handle to the spool.  Then call <code>kv_spool_read</code> to read the spool.</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.6
 by Lorenzo Bettini
@@ -1316,7 +1306,7 @@ http://www.gnu.org/software/src-highlite -->
 <pre><tt><span style="color: #009900">void</span> <span style="color: #990000">*</span>sp <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_spoolreader_new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
 <span style="color: #009900">void</span> <span style="color: #990000">*</span>set <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">kv_set_new</span></span><span style="color: #990000">();</span>
 <span style="font-weight: bold"><span style="color: #000000">kv_spool_read</span></span><span style="color: #990000">(</span>sp<span style="color: #990000">,</span>set<span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">);</span></tt></pre></div></div>
-<div class="paragraph"><p>The final argument to <tt>kv_spool_read</tt> specifies whether it should block if there is no
+<div class="paragraph"><p>The final argument to <code>kv_spool_read</code> specifies whether it should block if there is no
 data ready in the spool. A positive return value means success (data was read from the
 spool and it&#8217;s been populated into the set).  A zero value means that non-blocking mode
 was used, but no data is currently available in the spool.</p></div>
@@ -1331,22 +1321,22 @@ http://www.gnu.org/software/src-highlite -->
   <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"key is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>key<span style="color: #990000">);</span>
   <span style="font-weight: bold"><span style="color: #000000">printf</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"value is %s</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> kv<span style="color: #990000">-&gt;</span>val<span style="color: #990000">);</span>
 <span style="color: #FF0000">}</span></tt></pre></div></div>
-<div class="paragraph"><p>You can also fetch a particular key-value pair from the set using <tt>kv_get</tt>, providing
+<div class="paragraph"><p>You can also fetch a particular key-value pair from the set using <code>kv_get</code>, providing
 the key as the final argument:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>kv_t *kv = kv_get(set, "user");</tt></pre>
+<pre><code>kv_t *kv = kv_get(set, "user");</code></pre>
 </div></div>
-<div class="paragraph"><p>The number of key-value pairs in the set can be obtained using <tt>kv_len</tt>:</p></div>
+<div class="paragraph"><p>The number of key-value pairs in the set can be obtained using <code>kv_len</code>:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>int count = kv_len(set);</tt></pre>
+<pre><code>int count = kv_len(set);</code></pre>
 </div></div>
 <div class="paragraph"><p>The C API also has a function to rewind the spool, which works if there is no reader that
 has the spool open at the time. It takes the spool directory as its only argument.</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><tt>sp_reset(dir);</tt></pre>
+<pre><code>sp_reset(dir);</code></pre>
 </div></div>
 </div>
 </div>
@@ -1363,7 +1353,7 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div id="footer">
 <div id="footer-text">
 Version 0.9<br />
-Last updated 2014-04-12 11:08:03 EDT
+Last updated 2014-12-02 15:45:27 EST
 </div>
 </div>
 </body>
