@@ -1,9 +1,11 @@
 #include <stdio.h>
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "kvspool.h"
+#include <pcre.h>
+#include "kvspool_internal.h"
 #include "utarray.h"
 
 typedef struct {
@@ -31,12 +33,29 @@ void ospool_fin(void *_osp) {
 UT_icd ospool_icd = {sizeof(ospool_t),ospool_ini,ospool_cpy,ospool_fin};
 
 void usage(char *prog) {
-  fprintf(stderr, "usage: %s [-v] -s spool <dstdir> ...\n", prog);
+  fprintf(stderr, "usage: %s [-v] [-W] [-k key -r regex] -s spool <dstdir> ...\n", prog);
   exit(-1);
+}
+
+#define OVECSZ 30 /* must be multiple of 3 */
+int keep_record(void *set, char *key, pcre *re) {
+  int rc, ovec[OVECSZ];
+  if (!key) return 1;
+  if (!re) return 1;
+
+  /* does set contain key */
+  kv_t *kv = kv_get(set, key);
+  if (kv == NULL) return 0; 
+
+  /* does value of key match regex */
+  rc = pcre_exec(re, NULL, kv->val, kv->vlen, 0, 0, ovec, OVECSZ);
+  return (rc > 0) ? 1 : 0;
 }
  
 int main(int argc, char * argv[]) {
-  int opt,verbose=0,dirmax=0,filemax=0;
+  char *key=NULL, *regex=NULL;
+  pcre *re;
+  int opt,verbose=0,raw=0;
   ospool_t *osp;
   void *set;
   /* input spool */
@@ -47,16 +66,26 @@ int main(int argc, char * argv[]) {
   UT_array *ospoolv;
   utarray_new(ospoolv, &ospool_icd);
  
-  while ( (opt = getopt(argc, argv, "v+D:F:s:")) != -1) {
+  while ( (opt = getopt(argc, argv, "v+s:k:r:W")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
-      case 'D': dirmax = atoi(optarg); if (dirmax==0) usage(argv[0]); break;
-      case 'F': filemax = atoi(optarg); if (filemax==0) usage(argv[0]); break;
       case 's': dir = strdup(optarg); break;
+      case 'k': key = strdup(optarg); break;
+      case 'r': regex = strdup(optarg); break;
+      case 'W': raw = 1; break;
       default: usage(argv[0]); break;
     }
   }
   if (dir==NULL) usage(argv[0]);
+  if (key && regex) {
+      const char *err;
+      int off; 
+      re = pcre_compile(regex, 0, &err, &off, NULL);
+      if (!re) {
+        fprintf(stderr, "error in regex\n");
+        goto done;
+      }
+  }
   sp = kv_spoolreader_new(dir);
   if (sp == NULL) {
       fprintf(stderr, "failed to open input spool %s\n", dir);
@@ -70,6 +99,7 @@ int main(int argc, char * argv[]) {
   }
 
   while (kv_spool_read(sp,set,1) == 1) {
+    if (!keep_record(set,key,re)) continue;
     osp=NULL;
     while ( (osp=(ospool_t*)utarray_next(ospoolv,osp))) {
       if (osp->sp ==NULL) { /* do lazy open */
@@ -79,7 +109,15 @@ int main(int argc, char * argv[]) {
           goto done;
         }
       }
-      kv_spool_write(osp->sp,set);
+      if (raw) {
+         /* peek into the internal set representation 
+          * where the set is already stored serialized */
+         kvset_t *_set = (kvset_t*)set;
+	 assert(_set->img); assert(_set->len);
+         kv_write_raw_frame(osp->sp, _set->img, _set->len);
+      } else {
+         kv_spool_write(osp->sp,set);
+      }
     }
   }
 

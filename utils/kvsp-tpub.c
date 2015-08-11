@@ -2,7 +2,10 @@
  * binary packed spool frames from the input spool. RR to multiple clients */
 #define _GNU_SOURCE
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/signalfd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -26,6 +29,7 @@ struct {
   void *sp;
   void *set;
   char *config_file; // cast config
+  char *stats_file;
   /* */
   int listener_port;
   int listener_fd;
@@ -37,6 +41,8 @@ struct {
   UT_array *outidxs;
   int rr_idx;
   UT_string *s; // scratch
+  size_t obpp; // output bytes per period
+  size_t ompp; // output messages per period
 } cfg = {
   .mb_per_client=1,
   .mode=fan,
@@ -47,6 +53,7 @@ void usage() {
                  "               -m <mb>    (megabytes to buffer to each client)\n"
                  "               -b <conf>  (binary cast config file)\n"
                  "               -d <spool> (spool to read)\n"
+                 "               -S <file>  (stats file to write)\n"
                  "               -r         (round robin mode, [def: fan mode])\n"
                  "\n", cfg.prog); 
   exit(-1);
@@ -189,18 +196,54 @@ int have_capacity() {
   return (pct_full > 90) ? 0 : 1;
 }
 
+/* this runs once a second. we write a file every 10s with mbit/sec going out */
+void dump_stats() {
+  int fd=-1, rc;
+  char stats[100];
+
+  static int counter=0;
+  if ((++counter % 10) != 0) return; // only update stats every 10s
+
+  if (cfg.stats_file == NULL) return;
+  fd = open(cfg.stats_file, O_WRONLY|O_TRUNC|O_CREAT, 0664);
+  if (fd == -1) {
+    fprintf(stderr,"open %s: %s\n", cfg.stats_file, strerror(errno));
+    goto done;
+  }
+  double mbit_per_sec = cfg.obpp ? (cfg.obpp*8.0/(10*1024*1024)) : 0;
+  snprintf(stats,sizeof(stats),"%.2f mbit/s\n", mbit_per_sec);
+  if (write(fd,stats,strlen(stats)) < 0) {
+    fprintf(stderr,"write %s: %s\n", cfg.stats_file, strerror(errno));
+    goto done;
+  }
+  double msgs_per_sec = cfg.ompp/10.0;
+  snprintf(stats,sizeof(stats),"%.2f msgs/s\n", msgs_per_sec);
+  if (write(fd,stats,strlen(stats)) < 0) {
+    fprintf(stderr,"write %s: %s\n", cfg.stats_file, strerror(errno));
+    goto done;
+  }
+ done:
+  if (fd != -1) close(fd);
+  cfg.obpp = 0; // reset for next period
+  cfg.ompp = 0; // reset for next period
+}
+
 int periodic_work() {
   int rc = -1, kc;
   shift_buffers();
+  dump_stats();
 
+#if 1
   while (have_capacity()) {
     kc = kv_spool_read(cfg.sp,cfg.set,0);
     if (kc <  0) goto done; // error
     if (kc == 0) break;     // no data
+    cfg.ompp++;
     if (set_to_binary(cfg.set, cfg.s)) goto done;
     append_to_client_buf(cfg.s);
   }
   mark_writable();
+#endif
   rc = 0;
 
  done:
@@ -291,11 +334,28 @@ void feed_client(int ready_fd, int events) {
   /* advance output index in the output buffer; we wrote rc bytes */
   if (rc < len) {
     *p += rc;
+    cfg.obpp += rc;
   } else {
     *p = 0;
     utstring_clear(*s);     // buffer emptied
     mod_epoll(EPOLLIN,*fd); // remove EPOLLOUT 
   }
+
+#if 1
+  shift_buffers();
+  int kc;
+  while (have_capacity()) {
+    kc = kv_spool_read(cfg.sp,cfg.set,0);
+    if (kc <  0) goto done; // error
+    if (kc == 0) break;     // no data
+    cfg.ompp++;
+    if (set_to_binary(cfg.set, cfg.s)) goto done;
+    append_to_client_buf(cfg.s);
+  }
+  mark_writable();
+ done:
+  return;
+#endif
 }
 
 
@@ -393,7 +453,7 @@ int main(int argc, char *argv[]) {
   utarray_new(output_defaults, &ut_str_icd);
   utarray_new(output_types,&ut_int_icd);
 
-  while ( (opt=getopt(argc,argv,"vb:p:m:d:rh")) != -1) {
+  while ( (opt=getopt(argc,argv,"vb:p:m:d:rS:h")) != -1) {
     switch(opt) {
       case 'v': cfg.verbose++; break;
       case 'p': cfg.listener_port=atoi(optarg); break; 
@@ -401,6 +461,7 @@ int main(int argc, char *argv[]) {
       case 'd': cfg.dir=strdup(optarg); break; 
       case 'r': cfg.mode=round_robin; break; 
       case 'b': cfg.config_file=strdup(optarg); break;
+      case 'S': cfg.stats_file=strdup(optarg); break;
       case 'h': default: usage(); break;
     }
   }
