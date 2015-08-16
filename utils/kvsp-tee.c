@@ -113,7 +113,7 @@ int main(int argc, char * argv[]) {
          /* peek into the internal set representation 
           * where the set is already stored serialized */
          kvset_t *_set = (kvset_t*)set;
-	 assert(_set->img); assert(_set->len);
+	       assert(_set->img); assert(_set->len);
          kv_write_raw_frame(osp->sp, _set->img, _set->len);
       } else {
          kv_spool_write(osp->sp,set);

@@ -1,19 +1,16 @@
 kvspool: a tool for data streams
 ================================
 Troy D. Hanson <tdh@tkhanson.net>
-v0.9, April 2014
 
 kv-spool ("key-value" spool):: 
-         a Linux-based C library, with Perl, Python and Java bindings, to stream data
-         between programs as key-value dictionaries. The data stream is backed to disk,
-         supports rewind, snapshot, network replication, and bounded disk consumption.
+         a Linux-based C library to stream data between programs as key-value dictionaries. 
+         It has tools to pipe the streams around, such as by network pub/sub or tee, to 
+         concentrate streams together, and to monitor the consumption status of streams.
 
 kvspool's niche
 ---------------
 Kvspool is a tiny API to stream dictionaries between programs.  The dictionaries have
-textual keys and values. Note that what we're calling a dictionary- what Python calls a 
-dictionary- is known as a hash in Perl, and is manifested in the Java API as a HashMap.
-It's a set of key-value pairs.
+text keys and values. The dictionary is a set of key-value pairs.
 
 To use kvspool, two programs open the same spool- which is just a directory. The writer
 puts dictionaries into the spool.  The reader gets dictionaries from the spool. It blocks
@@ -176,6 +173,7 @@ Basic
 |kvsp-rewind | kvsp-rewind spool
 |kvsp-tee    | kvsp-tee -s spool copy1 copy2
 |kvsp-concen | kvsp-concen -d spool1 -d spool2 spool
+|kvsp-bcat   | kvsp-bcat -b config -d spool
 |===============================================================================
 
 The `kvsp-init` command is used when a spool directory is first created, to set 
@@ -198,11 +196,17 @@ Use `kvsp-tee` to support multiple readers from one input spool. First make a se
 spool directory for each reader (and use `kvsp-init` to set the capacity of each one);
 then use `kvsp-tee` as the reader on the source spool. It maintains a continuous copy of
 the spool to the multiple destination spools. This command needs to be left running to
-maintain the tee.
+maintain the tee. The `-W` flag can be used to run tee in the more efficient raw mode,
+which copies the binary input to the binary output representation in the spool file. 
+It is possible to filter the incoming data using `-k key -r regex` options. In this
+usage the tee only passes a dictionary if it has the key and its value matches regex.
 
 The `kvsp-concen` utility is the opposite of `kvsp-tee`. It takes multiple source 
 spools and makes a single output spool from them. It is a spool concentrator. The
 source spools are flagged with `-d spool` and the final argument is the output spool.
+
+The `kvsp-bcat` command operates like `kvsp-bpub` (see below). It writes the binary
+encoded spool content to standard output.
 
 [[net_utilities]]
 Network utilities
