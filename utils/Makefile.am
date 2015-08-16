@@ -1,8 +1,8 @@
 AM_CFLAGS = -I.. -I../include
 LIBSPOOL = -L../src -lkvspool
-bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-tee kvsp-init kvsp-status \
+bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-init kvsp-status \
                kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub kvsp-upub \
-               ramdisk
+               ramdisk kvsp-bcat
 
 kvsp_spr_LDADD = $(LIBSPOOL)
 kvsp_spw_LDADD = $(LIBSPOOL)
@@ -12,6 +12,7 @@ kvsp_status_LDADD = $(LIBSPOOL)
 kvsp_speed_LDADD = $(LIBSPOOL)
 kvsp_mod_LDADD = $(LIBSPOOL)
 kvsp_rewind_LDADD = $(LIBSPOOL)
+kvsp_bcat_LDADD = $(LIBSPOOL)
 kvsp_bpub_LDADD = $(LIBSPOOL)
 kvsp_bsub_LDADD = $(LIBSPOOL)
 kvsp_npub_LDADD = $(LIBSPOOL)
@@ -22,11 +23,17 @@ kvsp_concen_LDADD = $(LIBSPOOL)
 kvsp_tpub_LDADD = $(LIBSPOOL)
 kvsp_upub_LDADD = $(LIBSPOOL)
 
+kvsp_bcat_SOURCES = kvsp-bcat.c kvsp-bconfig.c
 kvsp_bpub_SOURCES = kvsp-bpub.c kvsp-bconfig.c
 kvsp_bsub_SOURCES = kvsp-bsub.c kvsp-bconfig.c
 kvsp_npub_SOURCES = kvsp-npub.c kvsp-bconfig.c
 kvsp_nsub_SOURCES = kvsp-nsub.c kvsp-bconfig.c
 kvsp_tpub_SOURCES = kvsp-tpub.c kvsp-bconfig.c
+
+if HAVE_PCRE
+bin_PROGRAMS += kvsp-tee
+kvsp_tee_LDADD += -lpcre
+endif
 
 if HAVE_NANOMSG
 bin_PROGRAMS += kvsp-npub kvsp-nsub
@@ -58,6 +65,7 @@ kvsp_mod_DEPENDENCIES = ../src/libkvspool.a
 kvsp_rewind_DEPENDENCIES = ../src/libkvspool.a
 kvsp_sub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_pub_DEPENDENCIES = ../src/libkvspool.a
+kvsp_bcat_DEPENDENCIES = ../src/libkvspool.a
 kvsp_bpub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_bsub_DEPENDENCIES = ../src/libkvspool.a
 kvsp_npub_DEPENDENCIES = ../src/libkvspool.a
