@@ -6,7 +6,6 @@
 
 struct qk {
   UT_vector /* of UT_string */ keys;
-  UT_vector /* of UT_string */ vals;
 
   /* the callback below is invoked on qk_end. it receives this struct.
    * the tmp is reserved for the callback to use a scratch space. the
@@ -20,7 +19,7 @@ struct qk {
 /* API */
 struct qk *qk_new(void);
 int qk_start(struct qk *qk);
-int qk_add(struct qk *qk, char *key, char *val, ...);
+int qk_add(struct qk *qk, char *key, ...);
 int qk_end(struct qk *qk);
 void qk_free(struct qk *qk);
 

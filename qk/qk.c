@@ -41,7 +41,6 @@ struct qk *qk_new(void) {
   if (qk == NULL) goto done;
   memset(qk,0,sizeof(*qk));
   utvector_init(&qk->keys, &utvector_utstring_mm);
-  utvector_init(&qk->vals, &utvector_utstring_mm);
   utstring_init(&qk->tmp);
  done:
   return qk;
@@ -49,7 +48,6 @@ struct qk *qk_new(void) {
 
 int qk_start(struct qk *qk) {
   utvector_clear(&qk->keys);
-  utvector_clear(&qk->vals);
   utstring_clear(&qk->tmp);
 }
 
@@ -58,19 +56,16 @@ int qk_end(struct qk *qk) {
   return qk->cb(qk);
 }
 
-int qk_add(struct qk *qk, char *key, char *vfmt, ...) {
+int qk_add(struct qk *qk, char *key, ...) {
   va_list ap;
-  va_start(ap,vfmt);
+  va_start(ap,key);
   UT_string *k = (UT_string*)utvector_extend(&qk->keys);
-  UT_string *v = (UT_string*)utvector_extend(&qk->vals);
-  utstring_bincpy(k,key,strlen(key));
-  utstring_printf_va(v,vfmt,ap);
+  utstring_printf_va(k,key,ap);
   va_end(ap);
 }
 
 void qk_free(struct qk *qk) {
   utvector_fini(&qk->keys);
-  utvector_fini(&qk->vals);
   utstring_done(&qk->tmp);
   free(qk);
 }
