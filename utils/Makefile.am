@@ -1,7 +1,7 @@
 AM_CFLAGS = -I.. -I../include
 LIBSPOOL = -L../src -lkvspool
 bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-init kvsp-status \
-               kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub kvsp-upub \
+               kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub \
                ramdisk kvsp-bcat
 
 kvsp_spr_LDADD = $(LIBSPOOL)
@@ -45,6 +45,8 @@ if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-bpub kvsp-bsub
 kvsp_bpub_LDADD += -lzmq 
 kvsp_bsub_LDADD += -lzmq 
+endif
+if HAVE_ZEROMQ 
 if HAVE_JANSSON
 bin_PROGRAMS += kvsp-sub kvsp-pub kvsp-concen
 kvsp_pub_LDADD += -lzmq -ljansson
@@ -52,6 +54,10 @@ kvsp_upub_LDADD += -lzmq -ljansson
 kvsp_sub_LDADD += -lzmq -ljansson
 kvsp_concen_LDADD += -lzmq -ljansson
 endif
+endif
+if HAVE_JANSSON
+bin_PROGRAMS += kvsp-upub
+kvsp_upub_LDADD += -ljansson
 endif
 
 # to get a rebuild of the utilities when ../libkvspool.a changes:
