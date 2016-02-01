@@ -1,4 +1,6 @@
-AM_CFLAGS = -I.. -I../include
+srcdir = @srcdir@
+
+AM_CFLAGS = -I$(srcdir)/.. -I$(srcdir)/../include
 LIBSPOOL = -L../src -lkvspool
 bin_PROGRAMS = kvsp-spr kvsp-spw kvsp-init kvsp-status \
                kvsp-speed kvsp-mod kvsp-rewind kvsp-tpub \
