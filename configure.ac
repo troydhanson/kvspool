@@ -4,7 +4,7 @@ AC_INIT([kvspool], [1.0], [tdh@tkhanson.net])
 AC_CONFIG_SRCDIR(src/kvspool.c)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS(config/config.h)
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_PROG_CC
 AC_PROG_RANLIB
 
