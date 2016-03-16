@@ -24,6 +24,7 @@ kvsp_sub_LDADD = $(LIBSPOOL)
 kvsp_concen_LDADD = $(LIBSPOOL)
 kvsp_tpub_LDADD = $(LIBSPOOL)
 kvsp_upub_LDADD = $(LIBSPOOL)
+kvsp_kpub_LDADD = $(LIBSPOOL)
 
 kvsp_bcat_SOURCES = kvsp-bcat.c kvsp-bconfig.c
 kvsp_bpub_SOURCES = kvsp-bpub.c kvsp-bconfig.c
@@ -43,11 +44,19 @@ kvsp_npub_LDADD += -lnanomsg
 kvsp_nsub_LDADD += -lnanomsg 
 endif
 
+if HAVE_RDKAFKA
+if HAVE_JANSSON
+bin_PROGRAMS += kvsp-kpub
+kvsp_kpub_LDADD += -lrdkafka -ljansson
+endif
+endif
+
 if HAVE_ZEROMQ
 bin_PROGRAMS += kvsp-bpub kvsp-bsub
 kvsp_bpub_LDADD += -lzmq 
 kvsp_bsub_LDADD += -lzmq 
 endif
+
 if HAVE_ZEROMQ 
 if HAVE_JANSSON
 bin_PROGRAMS += kvsp-sub kvsp-pub kvsp-concen
