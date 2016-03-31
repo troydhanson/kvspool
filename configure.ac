@@ -33,6 +33,11 @@ AC_CHECK_LIB(rdkafka,rd_kafka_new,
   AM_CONDITIONAL(HAVE_RDKAFKA,true),
   AM_CONDITIONAL(HAVE_RDKAFKA,false))
 
+# is libnnctl installed
+AC_CHECK_LIB(nnctl,nnctl_exec,
+  AM_CONDITIONAL(HAVE_NNCTL,true),
+  AM_CONDITIONAL(HAVE_NNCTL,false), -lnanomsg)
+
 # is SSL installed. Not sure why Python build requires
 AC_CHECK_LIB(ssl,SSL_library_init,
   AM_CONDITIONAL(HAVE_SSL,true),

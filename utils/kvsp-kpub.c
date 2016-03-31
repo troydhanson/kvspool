@@ -21,7 +21,7 @@ char *topic;
 char errstr[512];
 
 void usage(char *prog) {
-  fprintf(stderr, "usage: %s [-v] -d spool <broker>\n", prog);
+  fprintf(stderr, "usage: %s [-v] [-t topic] -d spool <broker>\n", prog);
   exit(-1);
 }
 
