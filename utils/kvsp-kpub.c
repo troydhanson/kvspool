@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
       goto done;
     }
 
-    if (++ticks % 1000) rd_kafka_poll(k, 10); // FIXME handle delivery reports
+    if ((++ticks % 1000) == 0) rd_kafka_poll(k, 10);
   }
 
   rc = 0;
