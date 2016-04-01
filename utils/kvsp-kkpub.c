@@ -19,7 +19,6 @@
 #include <librdkafka/rdkafka.h>
 #include "utarray.h"
 #include "utstring.h"
-#include "libnnctl.h"
 #include "kvspool.h"
 #include "tpl.h"
 #include "ts.h"
@@ -52,10 +51,6 @@ struct {
   int ingress_socket_pull;
   int egress_socket_push;
   int egress_socket_pull;
-  char *nnctl_binding;
-  int nnctl_socket;
-  int nnctl_fd;
-  nnctl *nnctl;
 } CF = {
   .signal_fd = -1,
   .epoll_fd = -1,
@@ -63,8 +58,6 @@ struct {
   .ingress_socket_pull = -1,
   .egress_socket_push = -1,
   .egress_socket_pull = -1,
-  .nnctl_binding = "tcp://127.0.0.1:9995",
-  .nnctl_socket = -1,
   .nthread = 1,
 };
 
@@ -79,7 +72,6 @@ void usage() {
                  "   -d <spool>       (spool)\n"
                  "   -t <topic>       (kafka topic)\n"
                  "   -b <broker>      (kafka broker)\n"
-                 "   -N <binding>     (nnctl binding)\n"
                  "   -n <nthread>     (threads/pool) [def:1]\n"
                  "\n"
                  "The rdkafka config variables should be left at default values!\n"
@@ -427,11 +419,6 @@ int setup_nano(void) {
   if (nn_bind(CF.egress_socket_push,     "ipc://egress.ipc") < 0) goto done;
   if (nn_connect(CF.egress_socket_pull,  "ipc://egress.ipc") < 0) goto done;
 
-  /* set up our nnctl rep socket */
-  if ( (CF.nnctl_socket  = nn_socket(AF_SP, NN_REP)) < 0) goto done;
-  if (nn_bind(CF.nnctl_socket, CF.nnctl_binding) < 0) goto done;
-  if ( (CF.nnctl = nnctl_init(NULL, NULL)) == NULL) goto done;
-
   rc = 0;
 
  done:
@@ -448,11 +435,10 @@ int main(int argc, char *argv[]) {
   utarray_new(CF.rdkafka_topic_options,&ut_str_icd);
   void *res;
 
-  while ( (opt = getopt(argc, argv, "hv+N:n:d:b:t:c:C:")) != -1) {
+  while ( (opt = getopt(argc, argv, "hv+n:d:b:t:c:C:")) != -1) {
     switch(opt) {
       case 'v': CF.verbose++; break;
       case 'n': CF.nthread=atoi(optarg); break;
-      case 'N': CF.nnctl_binding=strdup(optarg); break;
       case 'd': CF.dir=strdup(optarg); break;
       case 't': CF.topic=strdup(optarg); break;
       case 'b': CF.broker=strdup(optarg); break;
@@ -497,9 +483,6 @@ int main(int argc, char *argv[]) {
   if (setup_nano() < 0) goto done;
 
   /* add descriptors of interest */
-  size_t sz = sizeof(CF.nnctl_fd);
-  nn_getsockopt(CF.nnctl_socket, NN_SOL_SOCKET, NN_RCVFD, &CF.nnctl_fd, &sz);
-  if (new_epoll(EPOLLIN, CF.nnctl_fd)) goto done;  // nnctl socket
   if (new_epoll(EPOLLIN, CF.signal_fd)) goto done; // signal socket
 
   /* fire up threads */
@@ -525,9 +508,6 @@ int main(int argc, char *argv[]) {
   while (epoll_wait(CF.epoll_fd, &ev, 1, -1) > 0) {
     if (ev.data.fd == CF.signal_fd) { 
       if (handle_signal() < 0) goto done; 
-    }
-    if (ev.data.fd == CF.nnctl_fd)  { 
-      if (nnctl_exec(CF.nnctl, CF.nnctl_socket) < 0) goto done; 
     }
   }
 
@@ -565,7 +545,6 @@ done:
   if (CF.ingress_socket_pull >= 0) nn_close(CF.ingress_socket_pull);
   if (CF.egress_socket_push >= 0) nn_close(CF.egress_socket_push);
   if (CF.egress_socket_pull >= 0) nn_close(CF.egress_socket_pull);
-  if (CF.nnctl_socket >= 0) nn_close(CF.nnctl_socket);
   if (CF.epoll_fd != -1) close(CF.epoll_fd);
   if (CF.signal_fd != -1) close(CF.signal_fd);
   ts_free(CF.spr_msgs_ts);
@@ -573,7 +552,6 @@ done:
   ts_free(CF.kaf_bytes_ts);
   if (CF.enc_thread) free(CF.enc_thread);
   if (CF.kaf_thread) free(CF.kaf_thread);
-  if (CF.nnctl) nnctl_free(CF.nnctl);
   utarray_free(CF.rdkafka_options);
   utarray_free(CF.rdkafka_topic_options);
   return rc;

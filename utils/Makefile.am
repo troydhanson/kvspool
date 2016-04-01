@@ -53,7 +53,7 @@ if HAVE_NANOMSG
 bin_PROGRAMS += kvsp-kkpub
 kvsp_kkpub_SOURCES = kvsp-kkpub.c ts.c ts.h
 kvsp_kkpub_CFLAGS = ${AM_CFLAGS} -pthread 
-kvsp_kkpub_LDADD += -lrdkafka -ljansson -lnanomsg -lnnctl
+kvsp_kkpub_LDADD += -lrdkafka -ljansson -lnanomsg 
 endif
 endif
 endif
