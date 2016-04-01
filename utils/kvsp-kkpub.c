@@ -413,11 +413,16 @@ int setup_nano(void) {
   if ( (CF.egress_socket_push  = nn_socket(AF_SP, NN_PUSH)) < 0) goto done;
   if ( (CF.egress_socket_pull  = nn_socket(AF_SP, NN_PULL)) < 0) goto done;
 
-  if (nn_bind(CF.ingress_socket_push,    "ipc://ingress.ipc") < 0) goto done;
-  if (nn_connect(CF.ingress_socket_pull, "ipc://ingress.ipc") < 0) goto done;
+  char ingress_sock[50],egress_sock[50];
+  pid_t pid = getpid();
+  snprintf(ingress_sock,sizeof(ingress_sock), "ipc:///tmp/ingress.ipc.%d", pid);
+  snprintf(egress_sock,sizeof(egress_sock), "ipc:///tmp/egress.ipc.%d", pid);
 
-  if (nn_bind(CF.egress_socket_push,     "ipc://egress.ipc") < 0) goto done;
-  if (nn_connect(CF.egress_socket_pull,  "ipc://egress.ipc") < 0) goto done;
+  if (nn_bind(CF.ingress_socket_push,    ingress_sock  ) < 0) goto done;
+  if (nn_connect(CF.ingress_socket_pull, ingress_sock) < 0) goto done;
+
+  if (nn_bind(CF.egress_socket_push,     egress_sock) < 0) goto done;
+  if (nn_connect(CF.egress_socket_pull,  egress_sock) < 0) goto done;
 
   rc = 0;
 
@@ -435,7 +440,7 @@ int main(int argc, char *argv[]) {
   utarray_new(CF.rdkafka_topic_options,&ut_str_icd);
   void *res;
 
-  while ( (opt = getopt(argc, argv, "hv+n:d:b:t:c:C:")) != -1) {
+  while ( (opt = getopt(argc, argv, "hv+N:n:d:b:t:c:C:")) != -1) {
     switch(opt) {
       case 'v': CF.verbose++; break;
       case 'n': CF.nthread=atoi(optarg); break;
