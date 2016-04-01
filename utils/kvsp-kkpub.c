@@ -506,16 +506,18 @@ int main(int argc, char *argv[]) {
   rc = pthread_create(&CF.spr_thread, NULL, spr_worker, NULL); if (rc) goto done;
   CF.enc_thread = malloc(sizeof(pthread_t)*CF.nthread);
   if (CF.enc_thread == NULL) goto done;
-  void *id;
-  for(i=0, id=NULL; i < CF.nthread; i++, id++) {
-    rc = pthread_create(&CF.enc_thread[i],NULL,enc_worker,id);
+  long id;
+  for(i=0; i < CF.nthread; i++) {
+    id = i;
+    rc = pthread_create(&CF.enc_thread[i],NULL,enc_worker,(void*)id);
     if (rc) goto done;
   }
 
   CF.kaf_thread = malloc(sizeof(pthread_t)*CF.nthread);
   if (CF.kaf_thread == NULL) goto done;
-  for(i=0, id=NULL; i < CF.nthread; i++, id++) {
-    rc = pthread_create(&CF.kaf_thread[i],NULL,kaf_worker,id);
+  for(i=0; i < CF.nthread; i++) {
+    id = i;
+    rc = pthread_create(&CF.kaf_thread[i],NULL,kaf_worker,(void*)id);
     if (rc) goto done;
   }
 
