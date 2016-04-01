@@ -32,6 +32,8 @@ int main(int argc, char *argv[]) {
   json_t *o = NULL;
   int ticks=0;
 
+  fprintf(stderr,"this program is not recommended; use kvsp-kkpub instead\n");
+
   while ( (opt = getopt(argc, argv, "v+d:st:")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
