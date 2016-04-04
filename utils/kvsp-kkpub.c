@@ -51,6 +51,8 @@ struct {
   int ingress_socket_pull;
   int egress_socket_push;
   int egress_socket_pull;
+  char ingress_socket_path[50];
+  char egress_socket_path[50];
 } CF = {
   .signal_fd = -1,
   .epoll_fd = -1,
@@ -413,16 +415,17 @@ int setup_nano(void) {
   if ( (CF.egress_socket_push  = nn_socket(AF_SP, NN_PUSH)) < 0) goto done;
   if ( (CF.egress_socket_pull  = nn_socket(AF_SP, NN_PULL)) < 0) goto done;
 
-  char ingress_sock[50],egress_sock[50];
   pid_t pid = getpid();
-  snprintf(ingress_sock,sizeof(ingress_sock), "ipc:///tmp/ingress.ipc.%d", pid);
-  snprintf(egress_sock,sizeof(egress_sock), "ipc:///tmp/egress.ipc.%d", pid);
+  snprintf(CF.ingress_socket_path,sizeof(CF.ingress_socket_path), 
+     "ipc:///tmp/%d.ingress.ipc", pid);
+  snprintf(CF.egress_socket_path, sizeof(CF.egress_socket_path), 
+     "ipc:///tmp/%d.egress.ipc", pid);
 
-  if (nn_bind(CF.ingress_socket_push,    ingress_sock  ) < 0) goto done;
-  if (nn_connect(CF.ingress_socket_pull, ingress_sock) < 0) goto done;
+  if (nn_bind(CF.ingress_socket_push,    CF.ingress_socket_path) < 0) goto done;
+  if (nn_connect(CF.ingress_socket_pull, CF.ingress_socket_path) < 0) goto done;
 
-  if (nn_bind(CF.egress_socket_push,     egress_sock) < 0) goto done;
-  if (nn_connect(CF.egress_socket_pull,  egress_sock) < 0) goto done;
+  if (nn_bind(CF.egress_socket_push,     CF.egress_socket_path) < 0) goto done;
+  if (nn_connect(CF.egress_socket_pull,  CF.egress_socket_path) < 0) goto done;
 
   rc = 0;
 
@@ -550,6 +553,8 @@ done:
   if (CF.ingress_socket_pull >= 0) nn_close(CF.ingress_socket_pull);
   if (CF.egress_socket_push >= 0) nn_close(CF.egress_socket_push);
   if (CF.egress_socket_pull >= 0) nn_close(CF.egress_socket_pull);
+  if (CF.egress_socket_path[0]) unlink(CF.egress_socket_path);
+  if (CF.ingress_socket_path[0]) unlink(CF.ingress_socket_path);
   if (CF.epoll_fd != -1) close(CF.epoll_fd);
   if (CF.signal_fd != -1) close(CF.signal_fd);
   ts_free(CF.spr_msgs_ts);
