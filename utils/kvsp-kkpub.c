@@ -51,8 +51,10 @@ struct {
   int ingress_socket_pull;
   int egress_socket_push;
   int egress_socket_pull;
-  char ingress_socket_path[50];
-  char egress_socket_path[50];
+  char ingress_socket_nanopath[50]; /* like ipc:///tmp/file.blah */
+  char egress_socket_nanopath[50];
+  char *ingress_socket_filepath;    /* like /tmp/file.blah */
+  char *egress_socket_filepath;
 } CF = {
   .signal_fd = -1,
   .epoll_fd = -1,
@@ -416,16 +418,19 @@ int setup_nano(void) {
   if ( (CF.egress_socket_pull  = nn_socket(AF_SP, NN_PULL)) < 0) goto done;
 
   pid_t pid = getpid();
-  snprintf(CF.ingress_socket_path,sizeof(CF.ingress_socket_path), 
-     "ipc:///tmp/%d.ingress.ipc", pid);
-  snprintf(CF.egress_socket_path, sizeof(CF.egress_socket_path), 
-     "ipc:///tmp/%d.egress.ipc", pid);
+  snprintf(CF.ingress_socket_nanopath,sizeof(CF.ingress_socket_nanopath), 
+     "ipc:///tmp/%d.ingress.ipc", pid); /* if you change this, change below too! */
+  snprintf(CF.egress_socket_nanopath, sizeof(CF.egress_socket_nanopath), 
+     "ipc:///tmp/%d.egress.ipc", pid); /* if you change this, change below too! */
+  /* the path without the ipc:// prefix is kept for unlinking */
+  CF.ingress_socket_filepath = &CF.ingress_socket_nanopath[6];
+  CF.egress_socket_filepath =  &CF.egress_socket_nanopath[6];
 
-  if (nn_bind(CF.ingress_socket_push,    CF.ingress_socket_path) < 0) goto done;
-  if (nn_connect(CF.ingress_socket_pull, CF.ingress_socket_path) < 0) goto done;
+  if (nn_bind(CF.ingress_socket_push,    CF.ingress_socket_nanopath) < 0) goto done;
+  if (nn_connect(CF.ingress_socket_pull, CF.ingress_socket_nanopath) < 0) goto done;
 
-  if (nn_bind(CF.egress_socket_push,     CF.egress_socket_path) < 0) goto done;
-  if (nn_connect(CF.egress_socket_pull,  CF.egress_socket_path) < 0) goto done;
+  if (nn_bind(CF.egress_socket_push,     CF.egress_socket_nanopath) < 0) goto done;
+  if (nn_connect(CF.egress_socket_pull,  CF.egress_socket_nanopath) < 0) goto done;
 
   rc = 0;
 
@@ -553,8 +558,8 @@ done:
   if (CF.ingress_socket_pull >= 0) nn_close(CF.ingress_socket_pull);
   if (CF.egress_socket_push >= 0) nn_close(CF.egress_socket_push);
   if (CF.egress_socket_pull >= 0) nn_close(CF.egress_socket_pull);
-  if (CF.egress_socket_path[0]) unlink(CF.egress_socket_path);
-  if (CF.ingress_socket_path[0]) unlink(CF.ingress_socket_path);
+  if (CF.egress_socket_filepath) unlink(CF.egress_socket_filepath);
+  if (CF.ingress_socket_filepath) unlink(CF.ingress_socket_filepath);
   if (CF.epoll_fd != -1) close(CF.epoll_fd);
   if (CF.signal_fd != -1) close(CF.signal_fd);
   ts_free(CF.spr_msgs_ts);
