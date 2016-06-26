@@ -250,7 +250,7 @@ void *kaf_worker(void *thread_id) {
   /* set up global options */
   conf = rd_kafka_conf_new();
   rd_kafka_conf_set_error_cb(conf, err_cb);
-  rd_kafka_conf_set_throttle_cb(conf, throttle_cb);
+  //rd_kafka_conf_set_throttle_cb(conf, throttle_cb);
   rd_kafka_conf_set_stats_cb(conf, stats_cb);
   kr = rd_kafka_conf_set(conf, "statistics.interval.ms", "60000", errstr, sizeof(errstr));
   if (kr != RD_KAFKA_CONF_OK) {
