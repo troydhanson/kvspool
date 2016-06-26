@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
 <meta name="generator" content="AsciiDoc 8.6.9" />
-<title>kvspool: a tool for data streams</title>
+<title>kvspool data stream tools</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
 
@@ -767,7 +767,7 @@ asciidoc.install(2);
 </head>
 <body class="article">
 <div id="header">
-<h1>kvspool: a tool for data streams</h1>
+<h1>kvspool data stream tools</h1>
 <span id="author">Troy D. Hanson</span><br />
 <span id="email"><code>&lt;<a href="mailto:tdh@tkhanson.net">tdh@tkhanson.net</a>&gt;</code></span><br />
 <div id="toc">
@@ -778,6 +778,8 @@ asciidoc.install(2);
 <div id="content">
 <div id="preamble">
 <div class="sectionbody">
+<div class="paragraph"><p>Back to the <a href="https://github.com/troydhanson/kvspool">kvspool Github page</a>.  Back to
+<a href="http://troydhanson.github.io">my other software</a>.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 kv-spool ("key-value" spool)
@@ -803,26 +805,6 @@ when it&#8217;s caught up, waiting for more data.  Like this,</p></div>
 <div class="paragraph"><p><span class="image">
 <img src="reader-writer.png" alt="A spool writer and reader" />
 </span></p></div>
-<div class="paragraph"><div class="title">Sneak peak</div><p>Here&#8217;s a sneak peak at a really simple writer and reader:</p></div>
-<div class="listingblock">
-<div class="title">Sample Python writer</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvspool
-kv <span style="color: #990000">=</span> kvspool<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">Kvspool</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span>
-d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span> <span style="color: #FF0000">"Wed"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"temp"</span><span style="color: #990000">:</span> <span style="color: #993399">37</span><span style="color: #990000">}</span>
-kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>d<span style="color: #990000">)</span></tt></pre></div></div>
-<div class="listingblock">
-<div class="title">Sample Perl reader</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$kv</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$d</span> <span style="color: #990000">=</span> <span style="color: #009900">$kv</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">read</span></span><span style="color: #990000">();</span></tt></pre></div></div>
 <div class="sidebarblock">
 <div class="content">
 <div class="title">Why did I write kvspool?</div>
@@ -916,24 +898,12 @@ The reader and writer are completely uninvolved in the replication process.</p><
 <div class="paragraph"><p><span class="image">
 <img src="pub-sub.png" alt="Publish and Subscribe" />
 </span></p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">A job manager such as the author&#8217;s <a href="http://troydhanson.github.com/pmtr/">pmtr process
-monitor</a> can be used to run <code>kvsp-sub</code> and <code>kvsp-pub</code> in the background, and restart
-them when the system reboots.</td>
-</tr></table>
-</div>
+<div class="paragraph"><p>You can run <code>kvsp-sub</code> and <code>kvsp-pub</code> in the background at system boot by setting
+them up as services or <a href="http://troydhanson.github.com/pmtr/">pmtr</a> jobs.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_license">License</h3>
-<div class="paragraph"><p>See the <a href="LICENSE.txt">LICENSE.txt</a> file. Kvspool is free and open source.</p></div>
-</div>
-<div class="sect2">
-<h3 id="_resources">Resources</h3>
-<div class="paragraph"><p>Additional software by the author is cataloged at <a href="http://troydhanson.github.io/">http://troydhanson.github.io/</a>.</p></div>
+<div class="paragraph"><p>Kvspool uses the MIT license.</p></div>
 </div>
 </div>
 </div>
@@ -945,21 +915,20 @@ them when the system reboots.</td>
 <div class="content">
 <pre><code>% git clone git://github.com/troydhanson/kvspool.git</code></pre>
 </div></div>
-<div class="paragraph"><p>To build kvspool:</p></div>
+<div class="paragraph"><p>To build and install kvspool, you need autotools installed. The configure script looks
+to see if optional libraries including ZeroMQ, Nanomsg, Jansson and librdkafka re
+installed.  It builds additional utilities if they are present.</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><code>% cd kvspool</code></pre>
 </div></div>
-<div class="paragraph"><p>If the <em>configure</em> script does not yet exist, run <code>./bootstrap</code>.  If you want to build the
-network replication utilities, make sure you have <strong>Jansson</strong> and <strong>ZeroMQ</strong> (2.x or 3.x).</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><code>% ./configure
+<pre><code>% ./autogen.sh
+% ./configure
 % make
 % sudo make install</code></pre>
 </div></div>
-<div class="paragraph"><p>This builds and installs the C library and utilities, and if the prerequisite packages
-are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based utilities.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1069,6 +1038,10 @@ cellspacing="0" cellpadding="4">
 <td align="left" valign="top"><p class="table"><code>kvsp-bsub -b cast.cfg -d spool tcp://192.168.1.9:2110</code></p></td>
 </tr>
 <tr>
+<td align="left" valign="top"><p class="table"><code>kvsp-kkpub</code></p></td>
+<td align="left" valign="top"><p class="table"><code>kvsp-kkpub -b kafka.host.name -t topic</code></p></td>
+</tr>
+<tr>
 <td align="left" valign="top"><p class="table"><code>kvsp-tpub</code></p></td>
 <td align="left" valign="top"><p class="table"><code>kvsp-tpub -b cast.cfg -d spool -p 2110</code></p></td>
 </tr>
@@ -1115,6 +1088,11 @@ ipv4      //  dotted quad IP address
 str       //  string
 d64       //  double (64-bit float)</code></pre>
 </div></div>
+</div>
+<div class="sect3">
+<h4 id="_kvsp_kkpub">kvsp-kkpub</h4>
+<div class="paragraph"><p>Publishes the spool in JSON encoding to a Kakfa topic. This tool requires librdkakfa and
+Jansson to be installed.</p></div>
 </div>
 <div class="sect3">
 <h4 id="_kvsp_tpub">kvsp-tpub</h4>
@@ -1191,91 +1169,11 @@ convenient to locate a spool on a ramdisk for performance.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples_amp_api">Examples &amp; API</h2>
+<h2 id="_api">API</h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="_perl">Perl</h3>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">use</span></span> KVSpool<span style="color: #990000">;</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$v</span> <span style="color: #990000">=</span> KVSpool<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">new</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-<span style="font-weight: bold"><span style="color: #0000FF">my</span></span> <span style="color: #009900">$h</span> <span style="color: #990000">=</span> <span style="color: #FF0000">{</span><span style="color: #FF0000">'day'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Wednesday'</span><span style="color: #990000">,</span> <span style="color: #FF0000">'user'</span> <span style="color: #990000">=&gt;</span> <span style="color: #FF0000">'Troy'</span><span style="color: #FF0000">}</span><span style="color: #990000">;</span>
-<span style="color: #009900">$v</span><span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #0000FF">write</span></span><span style="color: #990000">(</span><span style="color: #009900">$h</span><span style="color: #990000">);</span></tt></pre></div></div>
-<div class="paragraph"><p>In Perl the KVSpool object is instantiated with one directory argument. Then every time
-the <code>write</code> method is called with a hash reference as argument, it&#8217;s written to the spool.
-To read a spool, use the <code>read</code> method which returns a hash reference each times it&#8217;s
-called:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>my $h = $v-&gt;read();</code></pre>
-</div></div>
-<div class="paragraph"><p>The reader is normally blocking (it waits for data if none is immediately available).
-To enact non-blocking mode, use <code>$v-&gt;{blocking}=0;</code>, then test the reference returned from
-<code>read()</code> using <code>defined()</code>. If it&#8217;s not, no data is currently available in the spool.</p></div>
-</div>
-<div class="sect2">
-<h3 id="_python">Python</h3>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> kvspool
-kv <span style="color: #990000">=</span> kvspool<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">Kvspool</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">)</span>
-d <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #FF0000">"day"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">,</span><span style="color: #FF0000">"user"</span><span style="color: #990000">:</span><span style="color: #FF0000">"Troy"</span><span style="color: #990000">}</span>
-kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>d<span style="color: #990000">)</span></tt></pre></div></div>
-<div class="paragraph"><p>The <code>write</code> method takes a dictionary, while the <code>read</code> method returns a dictionary:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>d = kv.read()</code></pre>
-</div></div>
-<div class="paragraph"><p>To enact non-blocking mode on the reader, use <code>kv.blocking = 0</code> then test whether the
-object returned from <code>read()</code> is <code>None</code>. If so, no data is currently available in the spool.</p></div>
-</div>
-<div class="sect2">
-<h3 id="_java">Java</h3>
-<div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">public</span></span> <span style="font-weight: bold"><span style="color: #0000FF">class</span></span> <span style="color: #008080">TestKVJava</span> <span style="color: #FF0000">{</span>
-  <span style="font-weight: bold"><span style="color: #0000FF">public</span></span> <span style="font-weight: bold"><span style="color: #0000FF">static</span></span> <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">main</span></span><span style="color: #990000">(</span><span style="color: #008080">String</span> args<span style="color: #990000">[])</span> <span style="color: #FF0000">{</span>
-    <span style="color: #008080">KVJava</span> kv <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> <span style="font-weight: bold"><span style="color: #000000">KVJava</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"spool"</span><span style="color: #990000">);</span>
-    <span style="color: #008080">HashMap&lt;String,String&gt;</span> h <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> HashMap<span style="color: #990000">&lt;</span>String<span style="color: #990000">,</span>String<span style="color: #990000">&gt;();</span>
-    h<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">put</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"day"</span><span style="color: #990000">,</span>  <span style="color: #FF0000">"Wednesday"</span><span style="color: #990000">);</span>
-    h<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">put</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"user"</span><span style="color: #990000">,</span> <span style="color: #FF0000">"Troy"</span><span style="color: #990000">);</span>
-    kv<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">write</span></span><span style="color: #990000">(</span>h<span style="color: #990000">);</span>
-  <span style="color: #FF0000">}</span>
-<span style="color: #FF0000">}</span></tt></pre></div></div>
-<div class="paragraph"><p>The example first instantiates a <code>KVJava</code> object. (You can copy <code>KVJava.java</code> from the
-<code>kvjava</code> directory into your own source tree; this class loads the underlying JNI-based
-library, which must be built and installed as described below).</p></div>
-<div class="paragraph"><p>To write to the spool, pass a <code>HashMap&lt;String,String&gt;</code> to the <code>write</code> method. The <code>read</code>
-method is similar:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>HashMap&lt;String,String&gt; m;
-m = kv.read();</code></pre>
-</div></div>
-<div class="paragraph"><p>You can put the reader in non-blocking mode by setting <code>kv.blocking = false;</code>
-and then test whether the object returned from <code>read()</code> is equal to <code>null</code>. If so,
-no data is currently available in the spool.</p></div>
-<div class="paragraph"><div class="title">Building the JNI library</div><p>The Java binding is not yet integrated into the main build, so it requires extra steps to
-build. After building kvspool, <code>cd kvjava</code> and run <code>make</code>. Most likely you will need to
-edit the <code>kvjava/Makefile</code> lines where <code>JNIINC</code> and <code>JNILIB</code> are defined to make it work.
-The result of compilation is <code>libKVJava.so</code> which must be manually copied to your choice
-of library directory such as <code>/usr/local/lib</code> (You may also need to set <code>LD_LIBRARY_PATH</code>
-so that the dynamic linker can find this shared library it at runtime).</p></div>
-</div>
-<div class="sect2">
-<h3 id="_c_c">C/C++</h3>
 <div class="paragraph"><p>C programs must be linked with -lkvspool.</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
@@ -1304,7 +1202,7 @@ set to stderr using <code>kv_set_dump(set,stderr)</code>.</p></div>
 <div class="paragraph"><p>To open a spool for reading, call <code>kv_spoolreader_new</code> which takes the spool directory and
 returns an opaque handle to the spool.  Then call <code>kv_spool_read</code> to read the spool.</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
@@ -1317,7 +1215,7 @@ spool and it&#8217;s been populated into the set).  A zero value means that non-
 was used, but no data is currently available in the spool.</p></div>
 <div class="paragraph"><p>A C program can iterate through all the key-value pairs in the result set like this:</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
@@ -1346,18 +1244,11 @@ has the spool open at the time. It takes the spool directory as its only argumen
 </div>
 </div>
 </div>
-<div class="sect1">
-<h2 id="_acknowledgments">Acknowledgments</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Thanks to Trevor Adams for writing the original Perl and Java bindings and to
-<a href="http://jhuapl.edu/ott">JHU/APL OTT</a> for their support.</p></div>
-</div>
-</div>
-</div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-08-16 15:12:26 EDT
+Last updated
+ 2016-06-26 10:36:51 EDT
 </div>
 </div>
 </body>

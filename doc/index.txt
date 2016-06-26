@@ -1,6 +1,9 @@
-kvspool: a tool for data streams
-================================
+kvspool data stream tools
+=========================
 Troy D. Hanson <tdh@tkhanson.net>
+
+Back to the https://github.com/troydhanson/kvspool[kvspool Github page].  Back to
+http://troydhanson.github.io[my other software].
 
 kv-spool ("key-value" spool):: 
          a Linux-based C library to stream data between programs as key-value dictionaries. 
@@ -17,22 +20,6 @@ puts dictionaries into the spool.  The reader gets dictionaries from the spool. 
 when it's caught up, waiting for more data.  Like this,
 
 image:reader-writer.png[A spool writer and reader]
-
-.Sneak peak
-Here's a sneak peak at a really simple writer and reader:
-
-.Sample Python writer                      
-[source,python]
-  import kvspool                          
-  kv = kvspool.Kvspool("spool")          
-  d = {"day": "Wed", "temp": 37}        
-  kv.write(d)                                                          
-
-.Sample Perl reader
-[source,perl]
- use KVSpool;        
- my $kv = KVSpool->new("spool");
- my $d = $kv->read(); 
 
 .Why did I write kvspool?
 *******************************************************************************
@@ -126,18 +113,12 @@ The reader and writer are completely uninvolved in the replication process.
 
 image:pub-sub.png[Publish and Subscribe]
 
-[TIP]
-A job manager such as the author's http://troydhanson.github.com/pmtr/[pmtr process
-monitor] can be used to run `kvsp-sub` and `kvsp-pub` in the background, and restart
-them when the system reboots.
+You can run `kvsp-sub` and `kvsp-pub` in the background at system boot by setting
+them up as services or http://troydhanson.github.com/pmtr/[pmtr] jobs.
 
 License
 ~~~~~~~
-See the link:LICENSE.txt[LICENSE.txt] file. Kvspool is free and open source.
-
-Resources 
-~~~~~~~~~
-Additional software by the author is cataloged at http://troydhanson.github.io/.
+Kvspool uses the MIT license.
 
 Getting kvspool
 ---------------
@@ -145,19 +126,17 @@ You can clone kvspool from github:
 
   % git clone git://github.com/troydhanson/kvspool.git
 
-To build kvspool:
+To build and install kvspool, you need autotools installed. The configure script looks
+to see if optional libraries including ZeroMQ, Nanomsg, Jansson and librdkafka re
+installed.  It builds additional utilities if they are present.
 
   % cd kvspool
 
-If the 'configure' script does not yet exist, run `./bootstrap`.  If you want to build the
-network replication utilities, make sure you have *Jansson* and *ZeroMQ* (2.x or 3.x).
-
+  % ./autogen.sh
   % ./configure
   % make
   % sudo make install
 
-This builds and installs the C library and utilities, and if the prerequisite packages
-are installed, it builds the Perl, Python and Java bindings, and ZeroMQ-based utilities.
 
 Utilities
 ---------
@@ -219,6 +198,7 @@ Network utilities
 |kvsp-sub    | kvsp-sub -d spool tcp://192.168.1.9:1110 
 |kvsp-bpub   | kvsp-bpub -b cast.cfg -d spool tcp://192.168.1.9:2110
 |kvsp-bsub   | kvsp-bsub -b cast.cfg -d spool tcp://192.168.1.9:2110 
+|kvsp-kkpub  | kvsp-kkpub -b kafka.host.name -t topic
 |kvsp-tpub   | kvsp-tpub -b cast.cfg -d spool -p 2110
 |===============================================================================
 
@@ -261,6 +241,11 @@ These data types may appear in `cast.cfg`
    ipv4      //  dotted quad IP address
    str       //  string
    d64       //  double (64-bit float)
+
+kvsp-kkpub
+^^^^^^^^^^
+Publishes the spool in JSON encoding to a Kakfa topic. This tool requires librdkakfa and
+Jansson to be installed.
 
 kvsp-tpub
 ^^^^^^^^^
@@ -312,83 +297,9 @@ specify (as absolute paths) directories to create within the ramdisk.  Using `ra
 and show its size.  The `ramdisk` utility is included with kvspool because it is often
 convenient to locate a spool on a ramdisk for performance.
 
-Examples & API
---------------
+API
+---
 
-Perl
-~~~~
-[source,perl]
-  use KVSpool;
-  my $v = KVSpool->new("spool");
-  my $h = {'day' => 'Wednesday', 'user' => 'Troy'};
-  $v->write($h);
-
-In Perl the KVSpool object is instantiated with one directory argument. Then every time
-the `write` method is called with a hash reference as argument, it's written to the spool.
-To read a spool, use the `read` method which returns a hash reference each times it's
-called:
-
-  my $h = $v->read();
-
-The reader is normally blocking (it waits for data if none is immediately available). 
-To enact non-blocking mode, use `$v->{blocking}=0;`, then test the reference returned from
-`read()` using `defined()`. If it's not, no data is currently available in the spool.
-
-Python
-~~~~~~
-[source,python]
-  import kvspool
-  kv = kvspool.Kvspool("spool")
-  d = {"day":"Wednesday","user":"Troy"}
-  kv.write(d)
-
-The `write` method takes a dictionary, while the `read` method returns a dictionary:
-
-  d = kv.read()
-
-To enact non-blocking mode on the reader, use `kv.blocking = 0` then test whether the
-object returned from `read()` is `None`. If so, no data is currently available in the spool.
-
-Java
-~~~~
-[source,java]
-  public class TestKVJava {
-    public static void main(String args[]) {
-      KVJava kv = new KVJava("spool");
-      HashMap<String,String> h = new HashMap<String,String>();
-      h.put("day",  "Wednesday");
-      h.put("user", "Troy");
-      kv.write(h);
-    }
-  }
-
-The example first instantiates a `KVJava` object. (You can copy `KVJava.java` from the
-`kvjava` directory into your own source tree; this class loads the underlying JNI-based
-library, which must be built and installed as described below). 
-
-To write to the spool, pass a `HashMap<String,String>` to the `write` method. The `read`
-method is similar:
-
-    HashMap<String,String> m;
-    m = kv.read();
-
-You can put the reader in non-blocking mode by setting `kv.blocking = false;`
-and then test whether the object returned from `read()` is equal to `null`. If so, 
-no data is currently available in the spool.
-
-// sudo apt-get install default-jdk 
-
-.Building the JNI library
-The Java binding is not yet integrated into the main build, so it requires extra steps to
-build. After building kvspool, `cd kvjava` and run `make`. Most likely you will need to 
-edit the `kvjava/Makefile` lines where `JNIINC` and `JNILIB` are defined to make it work.
-The result of compilation is `libKVJava.so` which must be manually copied to your choice
-of library directory such as `/usr/local/lib` (You may also need to set `LD_LIBRARY_PATH`
-so that the dynamic linker can find this shared library it at runtime). 
-
- 
-C/C++
-~~~~~
 C programs must be linked with -lkvspool. 
 
 [source,c]
@@ -452,11 +363,6 @@ The C API also has a function to rewind the spool, which works if there is no re
 has the spool open at the time. It takes the spool directory as its only argument.
 
  sp_reset(dir);
-
-Acknowledgments
----------------
-Thanks to Trevor Adams for writing the original Perl and Java bindings and to
-http://jhuapl.edu/ott[JHU/APL OTT] for their support.
 
 // vim: set tw=90 wm=2 syntax=asciidoc: 
 

@@ -1,6 +1,0 @@
-test1: initial key-value creation and free
-test2: test key replacement
-test3: test spooling out
-test4: test spooling out, then a second set (append)
-test5: spool reader test
-test6: test programmatic reset

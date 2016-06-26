@@ -33,24 +33,6 @@ AC_CHECK_LIB(rdkafka,rd_kafka_new,
   AM_CONDITIONAL(HAVE_RDKAFKA,true),
   AM_CONDITIONAL(HAVE_RDKAFKA,false))
 
-# is libnnctl installed
-AC_CHECK_LIB(nnctl,nnctl_exec,
-  AM_CONDITIONAL(HAVE_NNCTL,true),
-  AM_CONDITIONAL(HAVE_NNCTL,false), -lnanomsg)
-
-# is SSL installed. Not sure why Python build requires
-AC_CHECK_LIB(ssl,SSL_library_init,
-  AM_CONDITIONAL(HAVE_SSL,true),
-  AM_CONDITIONAL(HAVE_SSL,false))
-
-AX_PYTHON_DEVEL(>= '2.4')
-AM_CONDITIONAL(HAVE_PYTHON,test "x$pythonexists" = "xyes") 
-
-AC_CHECK_PROG(PERL,perl,perl)
-AX_PROG_PERL_VERSION([5.10.1],
-  AM_CONDITIONAL(HAVE_PERL,test "x$PERL" != "x"),
-  AM_CONDITIONAL(HAVE_PERL,false))
-
 AC_CONFIG_FILES(Makefile src/Makefile utils/Makefile)
 AC_OUTPUT
 

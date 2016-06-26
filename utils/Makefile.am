@@ -24,7 +24,6 @@ kvsp_sub_LDADD = $(LIBSPOOL)
 kvsp_concen_LDADD = $(LIBSPOOL)
 kvsp_tpub_LDADD = $(LIBSPOOL)
 kvsp_upub_LDADD = $(LIBSPOOL)
-kvsp_kpub_LDADD = $(LIBSPOOL)
 kvsp_kkpub_LDADD = $(LIBSPOOL)
 
 kvsp_bcat_SOURCES = kvsp-bcat.c kvsp-bconfig.c
@@ -47,8 +46,6 @@ endif
 
 if HAVE_RDKAFKA
 if HAVE_JANSSON
-bin_PROGRAMS += kvsp-kpub
-kvsp_kpub_LDADD += -lrdkafka -ljansson
 if HAVE_NANOMSG
 bin_PROGRAMS += kvsp-kkpub
 kvsp_kkpub_SOURCES = kvsp-kkpub.c ts.c ts.h
@@ -78,22 +75,3 @@ bin_PROGRAMS += kvsp-upub
 kvsp_upub_LDADD += -ljansson
 endif
 
-# to get a rebuild of the utilities when ../libkvspool.a changes:
-kvsp_spr_DEPENDENCIES = ../src/libkvspool.a
-kvsp_spw_DEPENDENCIES = ../src/libkvspool.a
-kvsp_tee_DEPENDENCIES = ../src/libkvspool.a
-kvsp_init_DEPENDENCIES = ../src/libkvspool.a
-kvsp_status_DEPENDENCIES = ../src/libkvspool.a
-kvsp_speed_DEPENDENCIES = ../src/libkvspool.a
-kvsp_mod_DEPENDENCIES = ../src/libkvspool.a
-kvsp_rewind_DEPENDENCIES = ../src/libkvspool.a
-kvsp_sub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_pub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_bcat_DEPENDENCIES = ../src/libkvspool.a
-kvsp_bpub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_bsub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_npub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_nsub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_concen_DEPENDENCIES = ../src/libkvspool.a
-kvsp_tpub_DEPENDENCIES = ../src/libkvspool.a
-kvsp_upub_DEPENDENCIES = ../src/libkvspool.a
