@@ -29,7 +29,7 @@ void usage(char *prog) {
 }
 
 int set_to_binary(void *set, UT_string *tmp) {
-  uint32_t l, u, a,b,c,d, abcd;
+  uint32_t l, u, a,b,c,d,e,f, abcd;
   uint16_t s;
   uint8_t g;
   double h;
@@ -58,6 +58,19 @@ int set_to_binary(void *set, UT_string *tmp) {
       case str: 
         l=kv->vlen; utstring_bincpy(tmp,&l,sizeof(l)); /* length prefix */
         utstring_bincpy(tmp,kv->val,kv->vlen);         /* string itself */
+        break;
+      case mac: 
+        if ((sscanf(kv->val,"%u:%u:%u:%u:%u:%u",&a,&b,&c,&d,&e,&f) != 6) ||
+           (a > 255 || b > 255 || c > 255 || d > 255 || e > 255 || f > 255)) {
+          fprintf(stderr,"invalid MAC for key %s: %s\n",*k,kv->val);
+          goto done;
+        }
+        utstring_bincpy(tmp,&a,sizeof(a));
+        utstring_bincpy(tmp,&b,sizeof(b));
+        utstring_bincpy(tmp,&c,sizeof(c));
+        utstring_bincpy(tmp,&d,sizeof(d));
+        utstring_bincpy(tmp,&e,sizeof(e));
+        utstring_bincpy(tmp,&f,sizeof(f));
         break;
       case ipv4: 
         if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||
