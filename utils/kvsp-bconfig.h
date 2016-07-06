@@ -9,7 +9,7 @@ extern UT_array /* of int */    *output_types;
 
 extern char *supported_types_str[];
 
-#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8) x(d64)
+#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8) x(d64) x(mac)
 #define x(t) t,
 enum supported_types { TYPES };
 #undef x
