@@ -160,6 +160,18 @@ int set_to_binary(void *set, UT_string *bin) {
         g=e; utstring_bincpy(bin,&g,sizeof(g));
         g=f; utstring_bincpy(bin,&g,sizeof(g));
         break;
+      case ipv46: 
+        if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||
+           (a > 255 || b > 255 || c > 255 || d > 255)) {
+          fprintf(stderr,"invalid IP for key %s: %s\n",*k,kv->val);
+          // FIXME try v6 interp
+          goto done;
+        }
+        abcd = (a << 24) | (b << 16) | (c << 8) | d;
+        abcd = htonl(abcd);
+        g=4; utstring_bincpy(bin,&g,sizeof(g));
+        utstring_bincpy(bin,&abcd,sizeof(abcd));
+        break;
       case ipv4: 
         if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||
            (a > 255 || b > 255 || c > 255 || d > 255)) {
