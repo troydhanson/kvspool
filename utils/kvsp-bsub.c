@@ -158,8 +158,8 @@ int main(int argc, char *argv[]) {
   if ( !(zsocket = zmq_socket(context, pull_mode?ZMQ_PULL:ZMQ_SUB))) goto done;
   if (remotes_file) if (read_lines(remotes_file,endpoints)) goto done;
   while (optind < argc) utarray_push_back(endpoints,&argv[optind++]);
-  endpoint=NULL;
   if (utarray_len(endpoints) == 0) usage(argv[0]);
+  endpoint=NULL;
   while ( (endpoint=(char**)utarray_next(endpoints,endpoint))) {
     if (verbose) fprintf(stderr,"connecting to %s\n", *endpoint);
     if (zmq_connect(zsocket, *endpoint)) goto done;
