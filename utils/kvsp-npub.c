@@ -65,17 +65,17 @@ int set_to_binary(void *set) {
         utstring_bincpy(tmp,kv->val,kv->vlen);         /* string itself */
         break;
       case mac: 
-        if ((sscanf(kv->val,"%u:%u:%u:%u:%u:%u",&a,&b,&c,&d,&e,&f) != 6) ||
+        if ((sscanf(kv->val,"%x:%x:%x:%x:%x:%x",&a,&b,&c,&d,&e,&f) != 6) ||
            (a > 255 || b > 255 || c > 255 || d > 255 || e > 255 || f > 255)) {
           fprintf(stderr,"invalid MAC for key %s: %s\n",*k,kv->val);
           goto done;
         }
-        utstring_bincpy(tmp,&a,sizeof(a));
-        utstring_bincpy(tmp,&b,sizeof(b));
-        utstring_bincpy(tmp,&c,sizeof(c));
-        utstring_bincpy(tmp,&d,sizeof(d));
-        utstring_bincpy(tmp,&e,sizeof(e));
-        utstring_bincpy(tmp,&f,sizeof(f));
+        g=a; utstring_bincpy(tmp,&g,sizeof(g));
+        g=b; utstring_bincpy(tmp,&g,sizeof(g));
+        g=c; utstring_bincpy(tmp,&g,sizeof(g));
+        g=d; utstring_bincpy(tmp,&g,sizeof(g));
+        g=e; utstring_bincpy(tmp,&g,sizeof(g));
+        g=f; utstring_bincpy(tmp,&g,sizeof(g));
         break;
       case ipv4: 
         if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||

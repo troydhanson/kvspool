@@ -7,6 +7,8 @@ extern UT_array /* of string */ *output_keys;
 extern UT_array /* of string */ *output_defaults;
 extern UT_array /* of int */    *output_types;
 
+int parse_config(char *);
+
 extern char *supported_types_str[];
 
 #define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8) x(d64) x(mac)

@@ -71,6 +71,35 @@ void discard_client_buffers(int pos) {
   utarray_erase(cfg.clients,pos,1); // erase client descriptor
 }
 
+
+int new_epoll(int events, int fd) {
+  int rc;
+  struct epoll_event ev;
+  memset(&ev,0,sizeof(ev)); // placate valgrind
+  ev.events = events;
+  ev.data.fd= fd;
+  if (cfg.verbose) fprintf(stderr,"adding fd %d to epoll\n", fd);
+  rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+  if (rc == -1) {
+    fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
+  }
+  return rc;
+}
+
+int mod_epoll(int events, int fd) {
+  int rc;
+  struct epoll_event ev;
+  memset(&ev,0,sizeof(ev)); // placate valgrind
+  ev.events = events;
+  ev.data.fd= fd;
+  if (cfg.verbose) fprintf(stderr,"modding fd %d epoll\n", fd);
+  rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_MOD, fd, &ev);
+  if (rc == -1) {
+    fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
+  }
+  return rc;
+}
+
 void mark_writable() {
   /* mark writability-interest for any clients with pending output */
   int *fd=NULL, *i=NULL;
@@ -115,17 +144,17 @@ int set_to_binary(void *set, UT_string *bin) {
         utstring_bincpy(bin,kv->val,kv->vlen);         /* string itself */
         break;
       case mac: 
-        if ((sscanf(kv->val,"%u:%u:%u:%u:%u:%u",&a,&b,&c,&d,&e,&f) != 6) ||
+        if ((sscanf(kv->val,"%x:%x:%x:%x:%x:%x",&a,&b,&c,&d,&e,&f) != 6) ||
            (a > 255 || b > 255 || c > 255 || d > 255 || e > 255 || f > 255)) {
           fprintf(stderr,"invalid MAC for key %s: %s\n",*k,kv->val);
           goto done;
         }
-        utstring_bincpy(bin,&a,sizeof(a));
-        utstring_bincpy(bin,&b,sizeof(b));
-        utstring_bincpy(bin,&c,sizeof(c));
-        utstring_bincpy(bin,&d,sizeof(d));
-        utstring_bincpy(bin,&e,sizeof(e));
-        utstring_bincpy(bin,&f,sizeof(f));
+        g=a; utstring_bincpy(bin,&g,sizeof(g));
+        g=b; utstring_bincpy(bin,&g,sizeof(g));
+        g=c; utstring_bincpy(bin,&g,sizeof(g));
+        g=d; utstring_bincpy(bin,&g,sizeof(g));
+        g=e; utstring_bincpy(bin,&g,sizeof(g));
+        g=f; utstring_bincpy(bin,&g,sizeof(g));
         break;
       case ipv4: 
         if ((sscanf(kv->val,"%u.%u.%u.%u",&a,&b,&c,&d) != 4) ||
@@ -369,35 +398,6 @@ void feed_client(int ready_fd, int events) {
  done:
   return;
 #endif
-}
-
-
-int new_epoll(int events, int fd) {
-  int rc;
-  struct epoll_event ev;
-  memset(&ev,0,sizeof(ev)); // placate valgrind
-  ev.events = events;
-  ev.data.fd= fd;
-  if (cfg.verbose) fprintf(stderr,"adding fd %d to epoll\n", fd);
-  rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_ADD, fd, &ev);
-  if (rc == -1) {
-    fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
-  }
-  return rc;
-}
-
-int mod_epoll(int events, int fd) {
-  int rc;
-  struct epoll_event ev;
-  memset(&ev,0,sizeof(ev)); // placate valgrind
-  ev.events = events;
-  ev.data.fd= fd;
-  if (cfg.verbose) fprintf(stderr,"modding fd %d epoll\n", fd);
-  rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_MOD, fd, &ev);
-  if (rc == -1) {
-    fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
-  }
-  return rc;
 }
 
 int handle_signal() {
