@@ -11,7 +11,7 @@ int parse_config(char *);
 
 extern char *supported_types_str[];
 
-#define TYPES x(i16) x(i32) x(ipv4) x(str) x(i8) x(d64) x(mac)
+#define TYPES x(i16) x(i32) x(ipv4) x(str) x(str8) x(i8) x(d64) x(mac)
 #define x(t) t,
 enum supported_types { TYPES };
 #undef x

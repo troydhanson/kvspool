@@ -55,6 +55,10 @@ int set_to_binary(void *set, UT_string *tmp) {
       case i8:  g=atoi(kv->val); utstring_bincpy(tmp,&g,sizeof(g)); break;
       case i16: s=atoi(kv->val); utstring_bincpy(tmp,&s,sizeof(s)); break;
       case i32: u=atoi(kv->val); utstring_bincpy(tmp,&u,sizeof(u)); break;
+      case str8: 
+        g=kv->vlen; utstring_bincpy(tmp,&g,sizeof(g)); /* length prefix */
+        utstring_bincpy(tmp,kv->val,g);                /* string itself */
+        break;
       case str: 
         l=kv->vlen; utstring_bincpy(tmp,&l,sizeof(l)); /* length prefix */
         utstring_bincpy(tmp,kv->val,kv->vlen);         /* string itself */

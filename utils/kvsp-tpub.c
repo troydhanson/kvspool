@@ -139,6 +139,10 @@ int set_to_binary(void *set, UT_string *bin) {
       case i8:  g=atoi(kv->val); utstring_bincpy(bin,&g,sizeof(g)); break;
       case i16: s=atoi(kv->val); utstring_bincpy(bin,&s,sizeof(s)); break;
       case i32: u=atoi(kv->val); utstring_bincpy(bin,&u,sizeof(u)); break;
+      case str8: 
+        g=kv->vlen; utstring_bincpy(bin,&g,sizeof(g)); /* length prefix */
+        utstring_bincpy(bin,kv->val,g);                /* string itself */
+        break;
       case str: 
         l=kv->vlen; utstring_bincpy(bin,&l,sizeof(l)); /* length prefix */
         utstring_bincpy(bin,kv->val,kv->vlen);         /* string itself */
