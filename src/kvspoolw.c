@@ -86,7 +86,6 @@ int sp_readdir(const char *dir, const char *suffix, UT_array *files) {
   }
 
   while ( (dent = readdir(d)) != NULL) {
-    if (dent->d_type != DT_REG) continue;
     name = dent->d_name;
     nlen = strlen(name);
     // verify suffix match 
