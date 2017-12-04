@@ -65,7 +65,6 @@ if HAVE_ZEROMQ
 if HAVE_JANSSON
 bin_PROGRAMS += kvsp-sub kvsp-pub kvsp-concen
 kvsp_pub_LDADD += -lzmq -ljansson
-kvsp_upub_LDADD += -lzmq -ljansson
 kvsp_sub_LDADD += -lzmq -ljansson
 kvsp_concen_LDADD += -lzmq -ljansson
 endif

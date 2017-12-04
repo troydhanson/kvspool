@@ -21,7 +21,7 @@ char *dir;
 char *remotes_file;
 void *context;
 void *zsocket;
-UT_string *val;
+UT_string *tmp;
 
 
 void usage(char *exe) {
@@ -63,63 +63,6 @@ int read_lines(char *file, UT_array *lines) {
 #define zmq_rcvmore_t int
 #endif
 
-int get(void **msg_data,size_t *msg_len,void *dst,size_t len) {
-  if (*msg_len < len) {
-    fprintf(stderr,"received message shorter than expected\n"); 
-    return -1;
-  }
-  memcpy(dst,*msg_data,len);
-  *(char**)msg_data += len;
-  *msg_len -= len;
-  return 0;
-}
-
-int binary_to_frame(void *sp, void *set, void *msg_data, size_t msg_len) {
-  int rc=-1,i=0,*t;
-  const char *key;
-  struct in_addr ia;
-
-  uint32_t l, u, a,b,c,d, abcd;
-  uint16_t s;
-  uint8_t g;
-  double h;
-
-  kv_set_clear(set);
-  char **k = NULL;
-  while ( (k=(char**)utarray_next(output_keys,k))) {
-    t = (int*)utarray_eltptr(output_types,i); assert(t);
-    // type is *t and key is *k
-    utstring_clear(val);
-    switch(*t) {
-      case d64: if (get(&msg_data,&msg_len,&h,sizeof(h))<0) goto done; utstring_printf(val,"%f",h); break;
-      case i8:  if (get(&msg_data,&msg_len,&g,sizeof(g))<0) goto done; utstring_printf(val,"%d",(int)g); break;
-      case i16: if (get(&msg_data,&msg_len,&s,sizeof(s))<0) goto done; utstring_printf(val,"%d",(int)s); break;
-      case i32: if (get(&msg_data,&msg_len,&u,sizeof(u))<0) goto done; utstring_printf(val,"%d",u); break;
-      case str: 
-        if (get(&msg_data,&msg_len,&l,sizeof(l)) < 0) goto done;
-        utstring_reserve(val,l);
-        if (get(&msg_data,&msg_len,utstring_body(val),l) < 0) goto done;
-        val->i += l;
-        break;
-      case ipv4: 
-        if (get(&msg_data,&msg_len,&abcd,sizeof(abcd)) < 0) goto done;
-        ia.s_addr = abcd;
-        utstring_printf(val,"%s", inet_ntoa(ia));
-        break;
-      default: assert(0); break;
-    }
-    i++;
-    key = *k;
-    kv_add(set, key, strlen(key), utstring_body(val), utstring_len(val));
-  }
-  kv_spool_write(sp, set);
-
-  rc = 0;
-
- done:
-  return rc;
-}
-
 int main(int argc, char *argv[]) {
 
   zmq_rcvmore_t more; size_t more_sz = sizeof(more);
@@ -130,7 +73,7 @@ int main(int argc, char *argv[]) {
   UT_array *endpoints;
   size_t msg_len;
   zmq_msg_t part;
-  utstring_new(val);
+  utstring_new(tmp);
   utarray_new(output_keys, &ut_str_icd);
   utarray_new(output_defaults, &ut_str_icd);
   utarray_new(output_types,&ut_int_icd);
@@ -184,7 +127,7 @@ int main(int argc, char *argv[]) {
       msg_len = zmq_msg_size(&part);
        
       switch(part_num) {  /* part 1 has serialized frame */
-        case 1: if (binary_to_frame(sp,set,msg_data,msg_len)) goto done; break;
+        case 1: if (binary_to_frame(sp,set,msg_data,msg_len,tmp)) goto done; break;
         default: assert(0); 
       }
 
@@ -205,7 +148,7 @@ int main(int argc, char *argv[]) {
   utarray_free(output_defaults);
   utarray_free(output_types);
   utarray_free(endpoints);
-  utstring_free(val);
+  utstring_free(tmp);
   return rc;
 }
 

@@ -30,64 +30,6 @@ void usage(char *exe) {
   exit(-1);
 }
 
-int get(void **msg_data,size_t *msg_len,void *dst,size_t len) {
-  if (*msg_len < len) {
-    fprintf(stderr,"received message shorter than expected\n"); 
-    return -1;
-  }
-  memcpy(dst,*msg_data,len);
-  *(char**)msg_data += len;
-  *msg_len -= len;
-  return 0;
-}
-
-int binary_to_frame(void *sp, void *set, void *msg_data, size_t msg_len) {
-  int rc=-1,i=0,*t;
-  const char *key;
-  struct in_addr ia;
-
-  uint32_t l, u, a,b,c,d, abcd;
-  uint16_t s;
-  uint8_t g;
-  double h;
-
-  kv_set_clear(set);
-  char **k = NULL;
-  while ( (k=(char**)utarray_next(output_keys,k))) {
-    t = (int*)utarray_eltptr(output_types,i); assert(t);
-    // type is *t and key is *k
-    utstring_clear(tmp);
-    switch(*t) {
-      case d64: if (get(&msg_data,&msg_len,&h,sizeof(h))<0) goto done; utstring_printf(tmp,"%f",h); break;
-      case i8:  if (get(&msg_data,&msg_len,&g,sizeof(g))<0) goto done; utstring_printf(tmp,"%d",(int)g); break;
-      case i16: if (get(&msg_data,&msg_len,&s,sizeof(s))<0) goto done; utstring_printf(tmp,"%d",(int)s); break;
-      case i32: if (get(&msg_data,&msg_len,&u,sizeof(u))<0) goto done; utstring_printf(tmp,"%d",u); break;
-      case str: 
-        if (get(&msg_data,&msg_len,&l,sizeof(l)) < 0) goto done;
-        utstring_reserve(tmp,l);
-        if (get(&msg_data,&msg_len,utstring_body(tmp),l) < 0) goto done;
-        tmp->i += l;
-        break;
-      case ipv4: 
-        if (get(&msg_data,&msg_len,&abcd,sizeof(abcd)) < 0) goto done;
-        ia.s_addr = abcd;
-        utstring_printf(tmp,"%s", inet_ntoa(ia));
-        break;
-      default: assert(0); break;
-    }
-    i++;
-    key = *k;
-    kv_add(set, key, strlen(key), utstring_body(tmp), utstring_len(tmp));
-  }
-  kv_spool_write(sp, set);
-
-  rc = 0;
-
- done:
-  if (rc) fprintf(stderr,"binary frame mismatches expected message length\n");
-  return rc;
-}
-
 int main(int argc, char *argv[]) {
   int opt,rc=-1,len;
   char *buf;
@@ -120,7 +62,7 @@ int main(int argc, char *argv[]) {
   while(1) {
 
     if ( (len = nn_recv(sock, &buf, NN_MSG, 0)) == -1) goto done;
-    if (binary_to_frame(sp,set,buf,len)) {rc=-3; goto done;}
+    if (binary_to_frame(sp,set,buf,len,tmp)) {rc=-3; goto done;}
     nn_freemsg(buf);
   }
 
