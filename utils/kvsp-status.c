@@ -111,33 +111,6 @@ void log_status(char*dir) {
   printf("%s\n", utstring_body(s));
   utstring_free(s);
 
-  /* the rest is for verbose output */
-  if (!verbose) goto done;
-  printf("\n\n");
-  if (sp_readdir(dir, ".sr", files) == -1) goto done;
-  f = NULL;
-  while ( (f=(char**)utarray_next(files,f))) {
-    file = *f;
-    printf("\t%s ",file);
-    if ( (fd=open(file,O_RDONLY)) == -1) {
-      perror("cannot open");
-      goto done;
-    }
-    if (read(fd,&sz,sizeof(sz)) != sizeof(sz)) {
-      perror("cannot open");
-      close(fd);
-      goto done;
-    }
-    close(fd);
-    file[strlen(file)-1]='p';
-    if (stat(file,&sb) == -1) spsz = 0;
-    else spsz = sb.st_size;
-    /* ignore the spool preamble */
-    if (spsz) spsz-=8;
-    sz -= 8;
-    printf("%u/%u (%2.2f%%)\n", sz, spsz, (spsz?(sz*100.0/spsz):0));
-  }
-
  done:
   utarray_free(files);
 }

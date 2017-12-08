@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include "kvspool_internal.h"
 
-int block=1;
 int verbose=0;
 char *dir = NULL;
 enum {mode_out,mode_nop} mode = mode_out;
@@ -24,11 +23,10 @@ int main(int argc, char *argv[]) {
   char *exe = argv[0];
   int opt;
 
-  while ( (opt = getopt(argc, argv, "cfB:v+p:")) != -1) {
+  while ( (opt = getopt(argc, argv, "cfv+p:")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
       case 'f': mode=mode_nop; break;
-      case 'B': block=atoi(optarg)?1:0; break;
       default: usage(exe); break;
     }
   }
@@ -40,7 +38,7 @@ int main(int argc, char *argv[]) {
 
 
   void *set = kv_set_new();
-  while (kv_spool_read(sp,set,block) > 0) {
+  while (kv_spool_read(sp,set,1) > 0) {
     switch(mode) {
       case mode_nop: continue;
       case mode_out: kv_set_dump(set,stdout); printf("\n"); break;

@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
   if (optind < argc) dir=argv[optind++];
   else usage(exe);
 
-  sp_rewind(dir);
-  return 0;
+  fprintf(stderr, "This utility is no longer supported.\n");
+  return -1;
 }
 

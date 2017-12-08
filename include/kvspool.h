@@ -36,26 +36,19 @@ kv_t *kv_next(void*set,kv_t *kv);
  * spooling API 
  *****************************************************************************/
 void *kv_spoolreader_new(const char *dir);
+void *kv_spoolreader_new_nb(const char *dir, int *fd);
 int kv_spool_read(void*sp, void *set, int blocking);
 void kv_spoolreader_free(void*);
 
 void *kv_spoolwriter_new(const char *dir);
 int kv_spool_write(void*sp, void *set);
 void kv_spoolwriter_free(void*);
-void sp_attrition(char *dir);
 
 /******************************************************************************
  * special purpose API 
  *****************************************************************************/
 typedef struct { int pct_consumed; time_t last_write; off_t spool_sz;} kv_stat_t;
 int kv_stat(const char *dir, kv_stat_t *stats);
-void sp_rewind(const char *dir);
-
-typedef struct {
-  size_t dir_max;
-  size_t file_max; /* this will be automatically set to 10% of dir_max */
-} kv_spool_options_t;
-extern kv_spool_options_t kv_spool_options;
 
 #if defined __cplusplus
 }

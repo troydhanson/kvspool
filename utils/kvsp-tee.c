@@ -33,7 +33,7 @@ void ospool_fin(void *_osp) {
 UT_icd ospool_icd = {sizeof(ospool_t),ospool_ini,ospool_cpy,ospool_fin};
 
 void usage(char *prog) {
-  fprintf(stderr, "usage: %s [-v] [-W] [-k key -r regex] -s spool <dstdir> ...\n", prog);
+  fprintf(stderr, "usage: %s [-v] [-k key -r regex] -s spool <dstdir> ...\n", prog);
   exit(-1);
 }
 
@@ -76,6 +76,7 @@ int main(int argc, char * argv[]) {
       default: usage(argv[0]); break;
     }
   }
+  if (raw) fprintf(stderr, "-W (raw mode) is deprecated, using regular mode\n");
   if (dir==NULL) usage(argv[0]);
   if (key && regex) {
       const char *err;
@@ -109,15 +110,7 @@ int main(int argc, char * argv[]) {
           goto done;
         }
       }
-      if (raw) {
-         /* peek into the internal set representation 
-          * where the set is already stored serialized */
-         kvset_t *_set = (kvset_t*)set;
-	       assert(_set->img); assert(_set->len);
-         kv_write_raw_frame(osp->sp, _set->img, _set->len);
-      } else {
-         kv_spool_write(osp->sp,set);
-      }
+     kv_spool_write(osp->sp,set);
     }
   }
 

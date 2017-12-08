@@ -239,7 +239,10 @@ These data types may appear in `cast.cfg`
    i16       //  short (16-bit int)
    i32       //  integer (32-bit int)
    ipv4      //  dotted quad IP address
+   ipv46     //  IPv4 or IPv6 address 
+   mac       //  MAC address (aa:bb:cc:dd:ee:ff)
    str       //  string
+   str8      //  string (max length 255)
    d64       //  double (64-bit float)
 
 kvsp-kkpub
@@ -300,7 +303,7 @@ convenient to locate a spool on a ramdisk for performance.
 API
 ---
 
-C programs must be linked with -lkvspool. 
+C programs must be linked with -lkvspool -lshr.
 
 [source,c]
   #include "kvspool.h"

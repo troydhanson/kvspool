@@ -23,11 +23,6 @@ void kv_set_clear(void*_set) {
     HASH_DEL(set->kvs, kv);
     free(kv->key); free(kv->val); free(kv);
   }
-  if (set->img || set->len) {
-    assert(set->img && set->len);
-    free(set->img); set->img=NULL;
-    set->len=0;
-  }
 }
 
 void kv_set_dump(void*_set,FILE *out) {
@@ -52,11 +47,6 @@ void kv_set_free(void*_set) {
     free(kv);
   }
   assert(set->kvs == NULL);
-  if (set->img || set->len) {
-    assert(set->img && set->len);
-    free(set->img);
-    set->len=0;
-  }
   free(set);
 }
 

@@ -15,23 +15,26 @@
 #include "utstring.h"
 #include "kvspool.h"
 #include "kvsp-bconfig.h"
+#include "shr.h"
 
-/* read spool, cast to binary (like bpub, tpub), write to stdout */
+/* read spool, cast to binary, write to shr */
 
 int verbose;
 int oneshot=0;
 char *spool;
+char *shr_file;
 
 void usage(char *prog) {
-  fprintf(stderr, "usage: %s -[vo] -b <config> -d spool\n", prog);
-  fprintf(stderr, "          -o (oneshot) read spool and exit\n");
+  fprintf(stderr, "usage: %s -[vo] -b <config> -d <spool> -s <shr>\n", prog);
+  fprintf(stderr, "          -o (oneshot) process one frame and exit\n");
   exit(-1);
 }
 
 int main(int argc, char *argv[]) {
+  struct shr *shr = NULL;
   void *sp=NULL;
   void *set=NULL;
-  int opt,rc=-1;
+  int opt,rc=-1,sc;
   char *config_file, *b;
   size_t l;
   set = kv_set_new();
@@ -41,17 +44,21 @@ int main(int argc, char *argv[]) {
   UT_string *tmp;
   utstring_new(tmp);
 
-  while ( (opt = getopt(argc, argv, "v+d:b:o")) != -1) {
+  while ( (opt = getopt(argc, argv, "v+d:b:os:")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
       case 'o': oneshot=1; break;
       case 'd': spool=strdup(optarg); break;
+      case 's': shr_file=strdup(optarg); break;
       case 'b': config_file=strdup(optarg); break;
       default: usage(argv[0]); break;
     }
   }
   if (spool == NULL) usage(argv[0]);
+  if (shr_file == NULL) usage(argv[0]);
   if (parse_config(config_file) < 0) goto done;
+  shr = shr_open(shr_file, SHR_WRONLY);
+  if (shr == NULL) goto done;
 
   sp = kv_spoolreader_new(spool);
   if (!sp) goto done;
@@ -61,9 +68,10 @@ int main(int argc, char *argv[]) {
 
     b = utstring_body(tmp);
     l = utstring_len(tmp);
-    if (write(STDOUT_FILENO, b, l) != l) {
-      fprintf(stderr,"write: %s\n", l>0 ? 
-        "incomplete" : strerror(errno));
+    sc = shr_write(shr, b, l);
+    if (sc <= 0) {
+      fprintf(stderr,"shr_write: error %d\n", sc);
+      goto done;
     }
     if (oneshot) break;
   }
@@ -72,6 +80,7 @@ int main(int argc, char *argv[]) {
 
  done:
   if (sp) kv_spoolreader_free(sp);
+  if (shr) shr_close(shr);
   kv_set_free(set);
   utarray_free(output_keys);
   utarray_free(output_defaults);

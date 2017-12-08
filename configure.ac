@@ -8,6 +8,21 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_PROG_CC
 AC_PROG_RANLIB
 
+have_shr_header=n
+have_shr_lib=n
+AC_CHECK_HEADERS([shr.h],[have_shr_header=y])
+AC_CHECK_LIB(shr,shr_readv,[have_shr_lib=y])
+if test "x${have_shr_header}${have_shr_lib}" != xyy
+then
+  AC_MSG_ERROR([
+  -----------------------------------------------------
+  The libshr build prerequisite was not found. Please
+  see the build instructions, install libshr and retry.
+  link to libshr: https://github.com/troydhanson/shr
+  -----------------------------------------------------
+  ])
+fi
+
 # is Jansson installed
 AC_CHECK_LIB(jansson,json_string,
   AM_CONDITIONAL(HAVE_JANSSON,true),

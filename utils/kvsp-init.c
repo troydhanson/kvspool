@@ -4,21 +4,23 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>
 #include "kvspool.h"
+#include "shr.h"
 #include "utstring.h"
 
 void usage(char *prog) {
   fprintf(stderr, "usage: %s [-v] -s <max> spool [ spool ... ]\n", prog);
   fprintf(stderr, "       <max> is directory max size e.g. 1G (units KMGT)\n");
-  fprintf(stderr, "       Note: this command makes the limit persistent\n");
   exit(-1);
 }
  
 int main(int argc, char * argv[]) {
-  int opt,verbose=0;
-  long dirmax=0;
+  int opt,verbose=0, rc = -1, sc;
+  char path[PATH_MAX];
+  long dirmax=10*1024*1024;
   /* input spool */
-  char *dir=NULL,unit,*sz="10GB";
+  char *dir=NULL,unit,*sz;
   UT_string *s;
   utstring_new(s);
 
@@ -31,10 +33,10 @@ int main(int argc, char * argv[]) {
          switch (sscanf(sz, "%ld%c", &dirmax, &unit)) {
            case 2: /* check unit */
             switch (unit) {
-              case 't': case 'T': break;
-              case 'g': case 'G': break;
-              case 'm': case 'M': break;
-              case 'k': case 'K': break;
+              case 't': case 'T': dirmax *= 1024; /* FALLTHRU */
+              case 'g': case 'G': dirmax *= 1024; /* FALLTHRU */
+              case 'm': case 'M': dirmax *= 1024; /* FALLTHRU */
+              case 'k': case 'K': dirmax *= 1024; /* FALLTHRU */
               case '\r': case '\n': case ' ': case '\t': break;
               default: usage(argv[0]); break;
             }
@@ -46,26 +48,18 @@ int main(int argc, char * argv[]) {
   }
   if (optind >= argc) usage(argv[0]);
   if (!dirmax) usage(argv[0]);
-  kv_spool_options.dir_max = dirmax;
 
   while (optind < argc) {
     dir = argv[optind++];
-
-    utstring_clear(s);
-    utstring_printf(s,"%s/limits", dir);
-    char *p = utstring_body(s);
-    FILE *f = fopen(p, "w");
-    if (f == NULL) {
-      fprintf(stderr,"cannot open %s: %s\n", p, strerror(errno));
-      continue;
-    }
-    fprintf(f, "%s", sz);
-    fclose(f);
-    sp_attrition(dir);
+    snprintf(path, PATH_MAX, "%s/%s", dir, "data");
+    sc = shr_init(path, dirmax, SHR_KEEPEXIST|SHR_MESSAGES|SHR_DROP);
+    if (sc < 0) goto done;
   }
+
+  rc = 0;
 
  done:
   utstring_free(s);
-  return 0;
+  return rc;
 }
 

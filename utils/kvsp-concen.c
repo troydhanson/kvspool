@@ -12,6 +12,7 @@
 #include <zmq.h>
 #include "utarray.h"
 #include "kvspool_internal.h"
+#include "tpl.h"
 
 /*******************************************************************************
 * spool concentrator
@@ -55,21 +56,45 @@ void usage(char *prog) {
 void configure_worker(int n) {
    worker_t *w = &workers[n];
    char transport[100];
-   snprintf(transport,sizeof(transport),"ipc://kvsp-concen-%u:%u",(int)getpid(),n);
+   snprintf(transport,sizeof(transport),"ipc:///tmp/kvsp-concen-%u:%u",(int)getpid(),n);
    w->transport = strdup(transport);
    w->dir = strdup(*(char**)utarray_eltptr(dirs,n-1));
    if (verbose) fprintf(stderr,"setting transport %s\n", w->transport);
 }
 
+void fill_set(void *img, size_t sz, kvset_t *set) {
+  tpl_node *tn;
+  char *key;
+  char *val;
+
+  kv_set_clear(set);
+
+  tn = tpl_map("A(ss)", &key, &val);
+  if (tpl_load(tn, TPL_MEM, img, sz) == -1) {
+    fprintf(stderr, "tpl_load failed (sz %d)\n", (int)sz);
+    return;
+  }
+  while( tpl_unpack(tn,1) > 0 ) {
+    kv_adds(set, key, val);
+    free(key);
+    free(val);
+  }
+  tpl_free(tn);
+}
+
+
 /* one special sub-process runs the 'device': subscriber/central republisher */
 void device(void) {
   char *img;
   size_t len;
+  kvset_t *set=NULL;
   int n,rc=-1;
   void *dev_context=NULL;
   void *pull_socket=NULL;
   if ( !(dev_context = zmq_init(1))) goto done;
   if ( !(pull_socket = zmq_socket(dev_context, ZMQ_PULL))) goto done;
+
+  set = kv_set_new();
 
   /* connect the subscriber socket to each of the workers. then subscribe it */
   for(n=1;n<wn;n++) {
@@ -92,11 +117,13 @@ void device(void) {
     if ((rc = zmq_recvmsg(pull_socket,&msg,0)) == -1) break;
     img = zmq_msg_data(&msg); 
     len = zmq_msg_size(&msg);
-    if (kv_write_raw_frame(osp, img, len) == -1) break;
+		fill_set(img, len, set);
+    if (kv_spool_write(osp, set) < 0) break;
     zmq_msg_close(&msg);
   }
 
  done:
+  if (set) kv_set_free(set);
   if (rc) fprintf(stderr,"zmq: device %s\n", zmq_strerror(errno));
   if (pull_socket) zmq_close(pull_socket);
   if (dev_context) zmq_term(dev_context);
@@ -107,6 +134,7 @@ void device(void) {
 void worker(int w) {
   int rc=-1;
   pid_t pid;
+  tpl_node *tn;
 
   assert(workers[w].pid == 0);
 
@@ -131,7 +159,7 @@ void worker(int w) {
   char name[16];
   snprintf(name,sizeof(name),"kvsp-concen: %s", w ? workers[w].dir : "device");
   prctl(PR_SET_NAME,name);
-  prctl(PR_SET_PDEATHSIG, SIGHUP); // TODO clean shutdown on HUP
+  prctl(PR_SET_PDEATHSIG, SIGHUP);
 
   if (w == 0) device(); // never returns
 
@@ -153,12 +181,25 @@ void worker(int w) {
 
   while (kv_spool_read(sp,_set,1) > 0) { /* read til interrupted by signal */
     kvset_t *set = (kvset_t*)_set; 
-    assert(set->img && set->len);
+    char *key, *val;
 
+		/* generate frame */
+		tn = tpl_map("A(ss)", &key, &val);
+		kv_t *kv = NULL;
+		while ( (kv = kv_next(set, kv))) {
+			key = kv->key;
+			val = kv->val;
+			tpl_pack(tn,1);
+		}
+    char *buf=NULL;
+    size_t len = 0;
+		tpl_dump(tn, TPL_MEM, &buf, &len);
+    if (buf == NULL) goto done;
+    tpl_free(tn);
     zmq_msg_t part;
-
-    rc = zmq_msg_init_size(&part, set->len); assert(!rc);
-    memcpy(zmq_msg_data(&part), set->img, set->len); // TODO use json?
+    rc = zmq_msg_init_size(&part, len);
+    memcpy(zmq_msg_data(&part), buf, len);
+    free(buf);
     rc = zmq_sendmsg(pub_socket, &part, 0);
     zmq_msg_close(&part);
     if(rc == -1) goto done;
@@ -168,7 +209,7 @@ void worker(int w) {
   rc=0;
 
  done:
-  // TODO avoid printing to parent stderr  (kv lib does; so dup fd to logging)
+
   if (rc) fprintf(stderr,"zmq: %s\n", zmq_strerror(errno));
   if (pub_socket) zmq_close(pub_socket);
   if (pub_context) zmq_term(pub_context);

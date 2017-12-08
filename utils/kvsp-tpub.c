@@ -1,84 +1,79 @@
-/* this program listens on a TCP port. when a client connects, it receives the
- * binary packed spool frames from the input spool. RR to multiple clients */
-#define _GNU_SOURCE
-#include <errno.h>
-#include <fcntl.h>
 #include <sys/epoll.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/time.h>
 #include <sys/signalfd.h>
 #include <signal.h>
-#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
-#include <assert.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include "utarray.h"
-#include "utstring.h"
-#include "kvspool.h"
+#include <stdio.h>
+#include <errno.h>
+#include <fcntl.h>
+#include "kvspool_internal.h"
 #include "kvsp-bconfig.h"
+#include "ringbuf.h"
+
+/* 
+ * publish spool over TCP in binary
+ */
+
+#define BATCH_FRAMES 10000
+#define OUTPUT_BUFSZ (10 * 1024 * 1024)
 
 struct {
-  int verbose;
   char *prog;
-  enum {fan, round_robin} mode;
-  /* spool stuff */
-  char *dir;
-  void *sp;
-  void *set;
-  char *config_file; // cast config
-  char *stats_file;
-  /* */
-  int listener_port;
-  int listener_fd;
-  int signal_fd;
-  int epoll_fd;
-  int mb_per_client;
-  UT_array *clients;
-  UT_array *outbufs;
-  UT_array *outidxs;
-  int rr_idx;
-  UT_string *s; // scratch
-  size_t obpp; // output bytes per period
-  size_t ompp; // output messages per period
+  enum {mode_pub } mode;
+  int verbose;
+  int epoll_fd;     /* epoll descriptor */
+  uint32_t events;  /* epoll event status */
+  int signal_fd;    /* to receive signals */
+  int listen_fd;    /* listening tcp socket */
+  int client_fd;    /* connected tcp socket */
+  in_addr_t addr;   /* IP address to listen on */
+  int port;         /* TCP port to listen on */
+  char *spool;      /* spool file name */
+  void *sp;         /* spool handle */
+  int spool_fd;     /* spool descriptor */
+  char *cast;       /* cast file name */
+  void *set;        /* kvspool set */
+  UT_string *tmp;   /* scratch area */
+  ringbuf *rb;      /* pending output */
 } cfg = {
-  .mb_per_client=1,
-  .mode=fan,
+  .addr = INADDR_ANY, /* by default, listen on all local IP's */
+  .port = 1919,       /* arbitrary */
+  .epoll_fd = -1,
+  .signal_fd = -1,
+  .listen_fd = -1,
+  .spool_fd = -1,
+  .client_fd = -1,
 };
-
-void usage() {
-  fprintf(stderr,"usage: %s [-v] -p <port>  (tcp port to listen on - packet stream)\n"
-                 "               -m <mb>    (megabytes to buffer to each client)\n"
-                 "               -b <conf>  (binary cast config file)\n"
-                 "               -d <spool> (spool to read)\n"
-                 "               -S <file>  (stats file to write)\n"
-                 "               -r         (round robin mode, [def: fan mode])\n"
-                 "\n", cfg.prog); 
-  exit(-1);
-}
 
 /* signals that we'll accept via signalfd in epoll */
 int sigs[] = {SIGHUP,SIGTERM,SIGINT,SIGQUIT,SIGALRM};
 
-/* clean up the client output buffers and slots in fd/buf arrays */
-void discard_client_buffers(int pos) {
-  UT_string **s = (UT_string**)utarray_eltptr(cfg.outbufs,pos);
-  utstring_free(*s);                // deep free string 
-  utarray_erase(cfg.outbufs,pos,1); // erase string pointer
-  utarray_erase(cfg.outidxs,pos,1); // erase write index
-  utarray_erase(cfg.clients,pos,1); // erase client descriptor
+void usage() {
+  fprintf(stderr,"usage: %s [options] \n", cfg.prog);
+  fprintf(stderr,"options:\n"
+                 "               -p <port>  (TCP port to listen on)\n"
+                 "               -d <spool> (spool directory to read)\n"
+                 "               -b <cast>  (cast config file)\n"
+                 "               -v         (verbose)\n"
+                 "               -h         (this help)\n"
+                 "\n");
+  exit(-1);
 }
 
-
-int new_epoll(int events, int fd) {
+int add_epoll(int events, int fd) {
   int rc;
   struct epoll_event ev;
   memset(&ev,0,sizeof(ev)); // placate valgrind
   ev.events = events;
   ev.data.fd= fd;
-  if (cfg.verbose) fprintf(stderr,"adding fd %d to epoll\n", fd);
+  if (cfg.verbose) fprintf(stderr,"adding fd %d events %d\n", fd, events);
   rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_ADD, fd, &ev);
   if (rc == -1) {
     fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
@@ -92,7 +87,7 @@ int mod_epoll(int events, int fd) {
   memset(&ev,0,sizeof(ev)); // placate valgrind
   ev.events = events;
   ev.data.fd= fd;
-  if (cfg.verbose) fprintf(stderr,"modding fd %d epoll\n", fd);
+  if (cfg.verbose) fprintf(stderr,"modding fd %d events %d\n", fd, events);
   rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_MOD, fd, &ev);
   if (rc == -1) {
     fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
@@ -100,238 +95,27 @@ int mod_epoll(int events, int fd) {
   return rc;
 }
 
-void mark_writable() {
-  /* mark writability-interest for any clients with pending output */
-  int *fd=NULL, *i=NULL;
-  UT_string **s=NULL;
-  while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
-    s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
-    i=(int*)utarray_next(cfg.outidxs,i);        assert(i);
-    if (utstring_len(*s) > *i) mod_epoll(EPOLLIN|EPOLLOUT, *fd);
+int del_epoll(int fd) {
+  int rc;
+  struct epoll_event ev;
+  rc = epoll_ctl(cfg.epoll_fd, EPOLL_CTL_DEL, fd, &ev);
+  if (rc == -1) {
+    fprintf(stderr,"epoll_ctl: %s\n", strerror(errno));
   }
+  return rc;
 }
 
-void append_to_client_buf(UT_string *f) {
-  assert(utarray_len(cfg.outbufs) > 0);
-  UT_string **s=NULL;
-  size_t l,least,c;
-  char *b;
-  int i=0,lx;
+/* work we do at 1hz  */
+int periodic_work(void) {
+  int rc = -1;
 
-  b = utstring_body(f);
-  l = utstring_len(f);
-
-  switch(cfg.mode) {
-    case fan:          // send to ALL clients
-      while ( (s=(UT_string**)utarray_next(cfg.outbufs,s))) {
-        utstring_bincpy(*s,b,l);
-      }
-      break;
-    case round_robin:  // send to ONE client 
-      while ( (s=(UT_string**)utarray_next(cfg.outbufs,s))) {
-        c = utstring_len(*s);
-        if ((i==0) || (c < least)) {least=c; lx=i;}
-        i++;
-      }
-      s = (UT_string**)utarray_eltptr(cfg.outbufs,lx);
-      utstring_bincpy(*s,b,l);
-      break;
-  }
-}
-
-// periodically we shift the output buffers down
-// to reclaim the already written output regions
-void shift_buffers() {
-  int *fd=NULL, *i=NULL;
-  UT_string **s=NULL;
-  size_t len;
-
-  while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
-    s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
-    i=(int*)utarray_next(cfg.outidxs,i);        assert(i);
-    len = utstring_len(*s);
-    if (*i == 0) continue; // nothing to shift 
-
-    assert(*i > 0);
-    memmove((*s)->d, (*s)->d + *i, len-*i);
-    (*s)->i -= *i;
-    *i = 0;
-  }
-}
-
-/* used to stop reading the spool when internal buffers are 90% full */
-int have_capacity() {
-  size_t max = utarray_len(cfg.outbufs) * cfg.mb_per_client * (1024*1024);
-  size_t used=0;
-  UT_string **s=NULL;
-  while ( (s=(UT_string**)utarray_next(cfg.outbufs,s))) used += utstring_len(*s);
-  double pct_full = max ? (used*100.0/max) : 100;
-  return (pct_full > 90) ? 0 : 1;
-}
-
-/* this runs once a second. we write a file every 10s with mbit/sec going out */
-void dump_stats() {
-  int fd=-1, rc;
-  char stats[100];
-
-  static int counter=0;
-  if ((++counter % 10) != 0) return; // only update stats every 10s
-
-  if (cfg.stats_file == NULL) return;
-  fd = open(cfg.stats_file, O_WRONLY|O_TRUNC|O_CREAT, 0664);
-  if (fd == -1) {
-    fprintf(stderr,"open %s: %s\n", cfg.stats_file, strerror(errno));
-    goto done;
-  }
-  double mbit_per_sec = cfg.obpp ? (cfg.obpp*8.0/(10*1024*1024)) : 0;
-  snprintf(stats,sizeof(stats),"%.2f mbit/s\n", mbit_per_sec);
-  if (write(fd,stats,strlen(stats)) < 0) {
-    fprintf(stderr,"write %s: %s\n", cfg.stats_file, strerror(errno));
-    goto done;
-  }
-  double msgs_per_sec = cfg.ompp/10.0;
-  snprintf(stats,sizeof(stats),"%.2f msgs/s\n", msgs_per_sec);
-  if (write(fd,stats,strlen(stats)) < 0) {
-    fprintf(stderr,"write %s: %s\n", cfg.stats_file, strerror(errno));
-    goto done;
-  }
- done:
-  if (fd != -1) close(fd);
-  cfg.obpp = 0; // reset for next period
-  cfg.ompp = 0; // reset for next period
-}
-
-int periodic_work() {
-  int rc = -1, kc;
-  shift_buffers();
-  dump_stats();
-
-#if 1
-  while (have_capacity()) {
-    kc = kv_spool_read(cfg.sp,cfg.set,0);
-    if (kc <  0) goto done; // error
-    if (kc == 0) break;     // no data
-    cfg.ompp++;
-    if (set_to_binary(cfg.set, cfg.s)) goto done;
-    append_to_client_buf(cfg.s);
-  }
-  mark_writable();
-#endif
   rc = 0;
 
  done:
   return rc;
 }
 
-int setup_client_listener() {
-  int rc = -1;
-
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (fd == -1) {
-    fprintf(stderr,"socket: %s\n", strerror(errno));
-    goto done;
-  }
-  int one=1;
-  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-  struct sockaddr_in sin;
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = htonl(INADDR_ANY);
-  sin.sin_port = htons(cfg.listener_port);
-
-  if (bind(fd, (struct sockaddr*)&sin, sizeof(sin)) == -1) {
-    fprintf(stderr,"bind: %s\n", strerror(errno));
-    goto done;
-  }
-
-  if (listen(fd,1) == -1) {
-    fprintf(stderr,"listen: %s\n", strerror(errno));
-    goto done;
-  }
-
-  cfg.listener_fd = fd;
-  rc=0;
-
- done:
-  if ((rc < 0) && (fd != -1)) close(fd);
-  return rc;
-}
-
-/* flush as much pending output to the client as it can handle. */
-void feed_client(int ready_fd, int events) {
-  int *fd=NULL, rc, pos, rv, *p;
-  char *buf, tmp[100];
-  size_t len;
-  UT_string **s=NULL;
-
-  /* find the fd in our list */
-  while ( (fd=(int*)utarray_next(cfg.clients,fd))) {
-    s=(UT_string**)utarray_next(cfg.outbufs,s); assert(s);
-    pos = utarray_eltidx(cfg.clients, fd);
-    if (ready_fd == *fd) break;
-  }
-  assert(fd);
-
-  if (cfg.verbose > 1) {
-    fprintf(stderr, "pollout:%c pollin: %c\n", (events & EPOLLOUT)?'1':'0',
-                                               (events & EPOLLIN) ?'1':'0');
-  }
-
-  /* before we write to the client, drain any input or closure */
-  rv = recv(*fd, tmp, sizeof(tmp), MSG_DONTWAIT);
-  if (rv == 0) {
-    fprintf(stderr,"client closed (eof)\n");
-    close(*fd); /* deletes epoll instances on *fd too */
-    discard_client_buffers(pos);
-    return;
-  }
-
-  if ((events & EPOLLOUT) == 0) return;
-
-  /* send the pending buffer to the client */
-  p = (int*)utarray_eltptr(cfg.outidxs,pos);
-  buf = utstring_body(*s) + *p;
-  len = utstring_len(*s)  - *p;
-  rc = send(*fd, buf, len, MSG_DONTWAIT);
-  if (cfg.verbose) fprintf(stderr,"sent %d/%d bytes\n", rc, (int)len);
-
-  /* test for client closure or error. */
-  if (rc < 0) {
-    if ((errno == EWOULDBLOCK) || (errno == EAGAIN)) return;
-    fprintf(stderr,"client closed (%s)\n", strerror(errno));
-    close(*fd); /* deletes all epoll instances on *fd too */
-    discard_client_buffers(pos);
-    return;
-  }
-
-  /* advance output index in the output buffer; we wrote rc bytes */
-  if (rc < len) {
-    *p += rc;
-    cfg.obpp += rc;
-  } else {
-    *p = 0;
-    utstring_clear(*s);     // buffer emptied
-    mod_epoll(EPOLLIN,*fd); // remove EPOLLOUT 
-  }
-
-#if 1
-  shift_buffers();
-  int kc;
-  while (have_capacity()) {
-    kc = kv_spool_read(cfg.sp,cfg.set,0);
-    if (kc <  0) goto done; // error
-    if (kc == 0) break;     // no data
-    cfg.ompp++;
-    if (set_to_binary(cfg.set, cfg.s)) goto done;
-    append_to_client_buf(cfg.s);
-  }
-  mark_writable();
- done:
-  return;
-#endif
-}
-
-int handle_signal() {
+int handle_signal(void) {
   int rc=-1;
   struct signalfd_siginfo info;
   
@@ -342,7 +126,7 @@ int handle_signal() {
 
   switch(info.ssi_signo) {
     case SIGALRM: 
-      if (periodic_work()) goto done;
+      if (periodic_work() < 0) goto done;
       alarm(1); 
       break;
     default: 
@@ -357,65 +141,224 @@ int handle_signal() {
   return rc;
 }
 
-int accept_client() {
-  int rc=-1, i=0;
+int setup_listener() {
+  int rc = -1, one=1;
 
-  struct sockaddr_in cin;
-  socklen_t cin_sz = sizeof(cin);
-  int fd = accept(cfg.listener_fd,(struct sockaddr*)&cin, &cin_sz);
+  int fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
-    fprintf(stderr,"accept: %s\n", strerror(errno));
+    fprintf(stderr,"socket: %s\n", strerror(errno));
     goto done;
   }
-  if (sizeof(cin)==cin_sz) fprintf(stderr,"connection from %s:%d\n", 
-    inet_ntoa(cin.sin_addr), (int)ntohs(cin.sin_port));
-  utarray_push_back(cfg.clients,&fd);
-  /* set up client output buffer. reserve space for full buffer */
-  UT_string *s; utstring_new(s); utstring_reserve(s,cfg.mb_per_client*1024*1024); 
-  utarray_push_back(cfg.outbufs,&s);
-  utarray_push_back(cfg.outidxs,&i);
-  new_epoll(EPOLLIN, fd);
 
+  /**********************************************************
+   * internet socket address structure: our address and port
+   *********************************************************/
+  struct sockaddr_in sin;
+  sin.sin_family = AF_INET;
+  sin.sin_addr.s_addr = cfg.addr;
+  sin.sin_port = htons(cfg.port);
+
+  /**********************************************************
+   * bind socket to address and port 
+   *********************************************************/
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+  if (bind(fd, (struct sockaddr*)&sin, sizeof(sin)) == -1) {
+    fprintf(stderr,"bind: %s\n", strerror(errno));
+    goto done;
+  }
+
+  /**********************************************************
+   * put socket into listening state
+   *********************************************************/
+  if (listen(fd,1) == -1) {
+    fprintf(stderr,"listen: %s\n", strerror(errno));
+    goto done;
+  }
+
+  if (add_epoll(EPOLLIN, fd)) goto done;
+  cfg.listen_fd = fd;
   rc=0;
+
+ done:
+  if ((rc < 0) && (fd != -1)) close(fd);
+  return rc;
+}
+
+/* accept a new client connection to the listening socket */
+int accept_client() {
+  int fd=-1, rc=-1;
+  struct sockaddr_in in;
+  socklen_t sz = sizeof(in);
+
+  fd = accept(cfg.listen_fd,(struct sockaddr*)&in, &sz);
+  if (fd == -1) {
+    fprintf(stderr,"accept: %s\n", strerror(errno)); 
+    goto done;
+  }
+
+  if (cfg.verbose && (sizeof(in)==sz)) {
+    fprintf(stderr,"connection fd %d from %s:%d\n", fd,
+    inet_ntoa(in.sin_addr), (int)ntohs(in.sin_port));
+  }
+
+  if (cfg.client_fd != -1) { /* already have a client? */
+    fprintf(stderr,"refusing client\n");
+    close(fd);
+    rc = 0;
+    goto done;
+  }
+
+  cfg.client_fd = fd;
+
+  /* epoll on both the spool and the client */
+  if (add_epoll(EPOLLIN, cfg.client_fd) < 0) goto done;
+  mod_epoll(EPOLLIN, cfg.spool_fd);
+
+  rc = 0;
 
  done:
   return rc;
 }
 
-int main(int argc, char *argv[]) {
-  int opt, rc, n, *fd;
-  cfg.prog = argv[0];
-  utarray_new(cfg.clients,&ut_int_icd);
-  utarray_new(cfg.outbufs,&ut_ptr_icd);
-  utarray_new(cfg.outidxs, &ut_int_icd);
-  cfg.set = kv_set_new();
-  struct epoll_event ev;
-  UT_string **s;
+int handle_spool(void) {
+  int rc = -1, sc, i=0;
+  char *buf;
+  size_t len;
+  int fl;
 
-  utstring_new(cfg.s);
+  while(i++ < BATCH_FRAMES) {
+
+    /* suspend spool reading if output buffer < 10% free */
+    if (ringbuf_get_freespace(cfg.rb) < (0.1 * OUTPUT_BUFSZ)) {
+      mod_epoll(0, cfg.spool_fd);
+      break;
+    }
+
+    sc = kv_spool_read(cfg.sp, cfg.set, 0);
+    if (sc < 0) {
+      fprintf(stderr, "kv_spool_read: error\n");
+      goto done;
+    }
+
+    /* no new data in spool ? */
+    if ( sc == 0 ) break;
+
+    sc = set_to_binary(cfg.set, cfg.tmp);
+    if (sc < 0) goto done;
+
+    buf = utstring_body(cfg.tmp);
+    len = utstring_len(cfg.tmp);
+    sc = ringbuf_put(cfg.rb, buf, len);
+    if (sc < 0) {
+      /* unexpected; we checked it was 10% free */
+      fprintf(stderr, "buffer exhausted\n");
+      goto done;
+    }
+  }
+
+  fl = EPOLLIN | (ringbuf_get_pending_size(cfg.rb) ? EPOLLOUT : 0);
+  mod_epoll(fl, cfg.client_fd);
+  rc = 0;
+
+ done:
+  return rc;
+}
+
+void close_client(void) {
+  ringbuf_clear(cfg.rb);
+  mod_epoll(0,cfg.spool_fd); /* ignore spool til new client */
+  close(cfg.client_fd);      /* close removes client epoll */
+  cfg.client_fd = -1;
+  cfg.events = 0;
+}
+
+void drain_client(void) {
+  char buf[1024];
+  ssize_t nr;
+
+  nr = read(cfg.client_fd, buf, sizeof(buf));
+  if(nr > 0) { 
+    if (cfg.verbose) fprintf(stderr,"client: %lu bytes\n", (long unsigned)nr);
+    return;
+  }
+
+  /* disconnect or socket error are handled the same - close it */
+  assert(nr <= 0);
+  fprintf(stderr,"client: %s\n", nr ? strerror(errno) : "closed");
+  close_client();
+}
+
+void send_client(void) {
+  size_t nr, wr;
+  char *buf;
+  int fl;
+
+  nr = ringbuf_get_next_chunk(cfg.rb, &buf);
+  assert(nr > 0);
+
+  wr = write(cfg.client_fd, buf, nr);
+  if (wr < 0) {
+    fprintf(stderr, "write: %s\n", strerror(errno));
+    close_client();
+    return;
+  }
+
+  ringbuf_mark_consumed(cfg.rb, wr);
+
+  /* adjust epoll on client based on we have more output to send */
+  fl = EPOLLIN | (ringbuf_get_pending_size(cfg.rb) ? EPOLLOUT : 0);
+  mod_epoll(fl, cfg.client_fd);
+
+  /* reinstate/retain spool reads if output buffer is > 10% free */
+  if (ringbuf_get_freespace(cfg.rb) > (0.1 * OUTPUT_BUFSZ)) {
+    mod_epoll(EPOLLIN, cfg.spool_fd);
+  }
+}
+
+int handle_client() {
+  int rc = -1;
+  assert(cfg.client_fd != -1);
+
+  if (cfg.events & EPOLLIN) drain_client();
+  if (cfg.events & EPOLLOUT) send_client();
+
+  rc = 0;
+  return rc;
+}
+
+int main(int argc, char *argv[]) {
+  int opt, rc=-1, n, ec;
+  struct epoll_event ev;
+  cfg.prog = argv[0];
+  char unit, *c, buf[100];
+  ssize_t nr;
+
   utarray_new(output_keys, &ut_str_icd);
   utarray_new(output_defaults, &ut_str_icd);
   utarray_new(output_types,&ut_int_icd);
+  cfg.set = kv_set_new();
+  utstring_new(cfg.tmp);
+  cfg.rb = ringbuf_new(OUTPUT_BUFSZ);
+  if (cfg.rb == NULL) goto done;
 
-  while ( (opt=getopt(argc,argv,"vb:p:m:d:rS:h")) != -1) {
+  while ( (opt = getopt(argc,argv,"vhp:d:b:")) > 0) {
     switch(opt) {
       case 'v': cfg.verbose++; break;
-      case 'p': cfg.listener_port=atoi(optarg); break; 
-      case 'm': cfg.mb_per_client=atoi(optarg); break; 
-      case 'd': cfg.dir=strdup(optarg); break; 
-      case 'r': cfg.mode=round_robin; break; 
-      case 'b': cfg.config_file=strdup(optarg); break;
-      case 'S': cfg.stats_file=strdup(optarg); break;
       case 'h': default: usage(); break;
+      case 'p': cfg.port = atoi(optarg); break;
+      case 'd': cfg.spool = strdup(optarg); break;
+      case 'b': cfg.cast = strdup(optarg); break;
     }
   }
-  if (cfg.listener_port==0) usage();
-  if (setup_client_listener()) goto done;
-  if (cfg.config_file==NULL) goto done;
-  if (parse_config(cfg.config_file) < 0) goto done;
-  if ( !(cfg.sp = kv_spoolreader_new(cfg.dir))) goto done;
 
-  /* block all signals. we take signals synchronously via signalfd */
+  if (cfg.spool == NULL) usage();
+  if (cfg.cast == NULL) usage();
+  
+  if (parse_config(cfg.cast) < 0) goto done;
+  cfg.sp = kv_spoolreader_new_nb(cfg.spool, &cfg.spool_fd);
+  if (cfg.sp == NULL) goto done;
+
+  /* block all signals. we accept signals via signal_fd */
   sigset_t all;
   sigfillset(&all);
   sigprocmask(SIG_SETMASK,&all,NULL);
@@ -439,36 +382,41 @@ int main(int argc, char *argv[]) {
     goto done;
   }
 
-  /* add descriptors of interest */
-  if (new_epoll(EPOLLIN, cfg.listener_fd)) goto done; // new client connections
-  if (new_epoll(EPOLLIN, cfg.signal_fd))   goto done; // signal socket
+  /* add descriptors of interest. idle spool til connect */
+  if (add_epoll(EPOLLIN, cfg.signal_fd)) goto done;
+  if (add_epoll(0, cfg.spool_fd) < 0) goto done;
+
+  if (setup_listener() < 0) goto done;
 
   alarm(1);
-  while (epoll_wait(cfg.epoll_fd, &ev, 1, -1) > 0) {
-    if (cfg.verbose > 1)  fprintf(stderr,"epoll reports fd %d\n", ev.data.fd);
-    if      (ev.data.fd == cfg.signal_fd)   { if (handle_signal() < 0) goto done; }
-    else if (ev.data.fd == cfg.listener_fd) { if (accept_client() < 0) goto done; }
-    else    feed_client(ev.data.fd, ev.events);
-  }
 
-done:
-  /* free the clients: close and deep free their buffers */
-  fd=NULL; s=NULL;
-  while ( (fd=(int*)utarray_prev(cfg.clients,fd))) {
-    s=(UT_string**)utarray_prev(cfg.outbufs,s);
-    close(*fd);
-    utstring_free(*s);
+  while (1) {
+    ec = epoll_wait(cfg.epoll_fd, &ev, 1, -1);
+    if (ec < 0) { 
+      fprintf(stderr, "epoll: %s\n", strerror(errno));
+      goto done;
+    }
+
+    cfg.events = ev.events;
+
+    if (ec == 0)                          { assert(0); goto done; }
+    else if (ev.data.fd == cfg.signal_fd) { if (handle_signal()  < 0) goto done; }
+    else if (ev.data.fd == cfg.listen_fd) { if (accept_client() < 0) goto done; }
+    else if (ev.data.fd == cfg.client_fd) { if (handle_client() < 0) goto done; }
+    else if (ev.data.fd == cfg.spool_fd)  { if (handle_spool() < 0) goto done; }
+    else                                  { assert(0); goto done; }
   }
-  utarray_free(cfg.clients);
-  utarray_free(cfg.outbufs);
-  utarray_free(cfg.outidxs);
-  utarray_free(output_keys);
-  utarray_free(output_defaults);
-  utarray_free(output_types);
-  utstring_free(cfg.s);
-  if (cfg.listener_fd) close(cfg.listener_fd);
-  if (cfg.signal_fd) close(cfg.signal_fd);
+  
+  rc = 0;
+ 
+ done:
+  if (cfg.signal_fd != -1) close(cfg.signal_fd);
+  if (cfg.epoll_fd != -1) close(cfg.epoll_fd);
+  if (cfg.listen_fd != -1) close(cfg.listen_fd);
+  if (cfg.client_fd != -1) close(cfg.client_fd);
   if (cfg.sp) kv_spoolreader_free(cfg.sp);
-  if (cfg.set) kv_set_free(cfg.set);
+  kv_set_free(cfg.set);
+  utstring_free(cfg.tmp);
+  if (cfg.rb) ringbuf_free(cfg.rb);
   return 0;
 }

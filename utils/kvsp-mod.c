@@ -9,7 +9,6 @@ int verbose=0;
 char *dir = NULL;
 char *conf = NULL;
 char *odir = ".";
-int block=1;
 UT_array *keys;
 
 void *osp = NULL;
@@ -46,7 +45,7 @@ int main(int argc, char *argv[]) {
   if (!sp) exit(-1);
 
   void *set = kv_set_new();
-  while ( (rc=kv_spool_read(sp,set,block)) > 0) {
+  while ( (rc=kv_spool_read(sp,set,1)) > 0) {
     /* calculate hash value of keys */
     char *key, *val, **k=NULL;
     while ( (k=(char**)utarray_next(keys,k))) {

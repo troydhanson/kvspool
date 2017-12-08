@@ -54,9 +54,13 @@ int main(int argc, char *argv[]) {
   kv_spoolwriter_free(sp);
 
   /* read test */
-  sp = kv_spoolreader_new(dir);
+  sp = kv_spoolreader_new_nb(dir, NULL);
   gettimeofday(&t1,NULL);
-  for(i=0; i<frames; i++) kv_spool_read(sp,set,0);
+  for(i=0; i<frames; i++) { 
+    if (kv_spool_read(sp,set,1) < 1) {
+      fprintf(stderr, "spool too small to hold frames for read back\n");
+    }
+  }
   gettimeofday(&t2,NULL);
 
   elapsed_usec_r = ((t2.tv_sec * 1000000) + t2.tv_usec) - 
