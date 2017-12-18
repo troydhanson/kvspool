@@ -23,6 +23,7 @@
 
 #define BATCH_FRAMES 10000
 #define OUTPUT_BUFSZ (10 * 1024 * 1024)
+#define OUTPUT_CUSHION (0.2 * OUTPUT_BUFSZ)
 
 struct {
   char *prog;
@@ -42,6 +43,7 @@ struct {
   void *set;        /* kvspool set */
   UT_string *tmp;   /* scratch area */
   ringbuf *rb;      /* pending output */
+  void *setv[BATCH_FRAMES]; /* bulk set array */
 } cfg = {
   .addr = INADDR_ANY, /* by default, listen on all local IP's */
   .port = 1919,       /* arbitrary */
@@ -224,33 +226,35 @@ int handle_spool(void) {
   int rc = -1, sc, i=0;
   char *buf;
   size_t len;
-  int fl;
+  int fl, nset;
 
-  while(i++ < BATCH_FRAMES) {
+  /* suspend spool reading if output buffer < 20% free */
+  if (ringbuf_get_freespace(cfg.rb) < OUTPUT_CUSHION) {
+    mod_epoll(0, cfg.spool_fd);
+    rc = 0;
+    goto done;
+  }
 
-    /* suspend spool reading if output buffer < 10% free */
-    if (ringbuf_get_freespace(cfg.rb) < (0.1 * OUTPUT_BUFSZ)) {
-      mod_epoll(0, cfg.spool_fd);
-      break;
-    }
+  nset = BATCH_FRAMES;
 
-    sc = kv_spool_read(cfg.sp, cfg.set, 0);
-    if (sc < 0) {
-      fprintf(stderr, "kv_spool_read: error\n");
-      goto done;
-    }
+  sc = kv_spool_readN(cfg.sp, cfg.setv, &nset);
+  if (sc < 0) {
+    fprintf(stderr, "kv_spool_readN: error\n");
+    goto done;
+  }
 
-    /* no new data in spool ? */
-    if ( sc == 0 ) break;
+  if (cfg.verbose) fprintf(stderr,"%d sets\n", nset);
 
-    sc = set_to_binary(cfg.set, cfg.tmp);
+  for(i=0; i < nset; i++) {
+
+    sc = set_to_binary(cfg.setv[i], cfg.tmp);
     if (sc < 0) goto done;
 
     buf = utstring_body(cfg.tmp);
     len = utstring_len(cfg.tmp);
     sc = ringbuf_put(cfg.rb, buf, len);
     if (sc < 0) {
-      /* unexpected; we checked it was 10% free */
+      /* unexpected; we checked it was 20% free */
       fprintf(stderr, "buffer exhausted\n");
       goto done;
     }
@@ -309,8 +313,8 @@ void send_client(void) {
   fl = EPOLLIN | (ringbuf_get_pending_size(cfg.rb) ? EPOLLOUT : 0);
   mod_epoll(fl, cfg.client_fd);
 
-  /* reinstate/retain spool reads if output buffer is > 10% free */
-  if (ringbuf_get_freespace(cfg.rb) > (0.1 * OUTPUT_BUFSZ)) {
+  /* reinstate/retain spool reads if output buffer is > 20% free */
+  if (ringbuf_get_freespace(cfg.rb) > OUTPUT_CUSHION) {
     mod_epoll(EPOLLIN, cfg.spool_fd);
   }
 }
@@ -327,7 +331,7 @@ int handle_client() {
 }
 
 int main(int argc, char *argv[]) {
-  int opt, rc=-1, n, ec;
+  int opt, rc=-1, n, ec, i;
   struct epoll_event ev;
   cfg.prog = argv[0];
   char unit, *c, buf[100];
@@ -337,6 +341,7 @@ int main(int argc, char *argv[]) {
   utarray_new(output_defaults, &ut_str_icd);
   utarray_new(output_types,&ut_int_icd);
   cfg.set = kv_set_new();
+  for(i=0; i < BATCH_FRAMES; i++) cfg.setv[i] = kv_set_new();
   utstring_new(cfg.tmp);
   cfg.rb = ringbuf_new(OUTPUT_BUFSZ);
   if (cfg.rb == NULL) goto done;
@@ -416,6 +421,7 @@ int main(int argc, char *argv[]) {
   if (cfg.client_fd != -1) close(cfg.client_fd);
   if (cfg.sp) kv_spoolreader_free(cfg.sp);
   kv_set_free(cfg.set);
+  for(i=0; i < BATCH_FRAMES; i++) kv_set_free(cfg.setv[i]);
   utstring_free(cfg.tmp);
   if (cfg.rb) ringbuf_free(cfg.rb);
   return 0;

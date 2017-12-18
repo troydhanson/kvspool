@@ -38,6 +38,7 @@ kv_t *kv_next(void*set,kv_t *kv);
 void *kv_spoolreader_new(const char *dir);
 void *kv_spoolreader_new_nb(const char *dir, int *fd);
 int kv_spool_read(void*sp, void *set, int blocking);
+int kv_spool_readN(void*sp, void **set, int *nset);
 void kv_spoolreader_free(void*);
 
 void *kv_spoolwriter_new(const char *dir);

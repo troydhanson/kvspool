@@ -9,9 +9,8 @@ char *dir = NULL;
 enum {mode_out,mode_nop} mode = mode_out;
 
 void usage(char *exe) {
-  fprintf(stderr,"usage: %s [-c|-f] [-v] [-B(lock) <1|0>] <dir>\n", exe);
-  fprintf(stderr,"  MODES: default               (text mode)\n");
-  fprintf(stderr,"         -f                    (discard mode)\n");
+  fprintf(stderr,"usage: %s [-f] <dir>\n", exe);
+  fprintf(stderr,"         -f    (discard mode)\n");
   exit(-1);
 }
 
@@ -23,7 +22,7 @@ int main(int argc, char *argv[]) {
   char *exe = argv[0];
   int opt;
 
-  while ( (opt = getopt(argc, argv, "cfv+p:")) != -1) {
+  while ( (opt = getopt(argc, argv, "fv+")) != -1) {
     switch (opt) {
       case 'v': verbose++; break;
       case 'f': mode=mode_nop; break;

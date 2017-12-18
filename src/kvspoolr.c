@@ -79,6 +79,37 @@ int kv_spool_read(void *_sp, void *_set, int obsolete_blocking_flag) {
   return sc; /* negative (error) or 0 (no data) case */
 }
 
+int kv_spool_readN(void *_sp, void **_setv, int *nset) {
+  struct shr *shr = (struct shr *)_sp;
+  kvset_t **setv = (kvset_t**)_setv;
+  ssize_t sc;
+  char *tmp=NULL;
+
+  int i;
+  int iovcnt = *nset;
+  struct iovec iov[iovcnt];
+  *nset = 0;
+
+  int tmpsz = 1024*1024;
+  tmp = malloc(tmpsz);
+  if (tmp == NULL) {
+    fprintf(stderr, "out of memory\n");
+    goto done;
+  }
+
+  sc = shr_readv(shr, tmp, tmpsz, iov, &iovcnt);
+  if (sc <= 0) goto done;
+
+  for(i=0; i < iovcnt; i++) {
+    fill_set(iov[i].iov_base, iov[i].iov_len, setv[i]);
+  }
+  *nset = iovcnt;
+
+ done:
+  if (tmp) free(tmp);
+  return sc;
+}
+
 void kv_spoolreader_free(void *_sp) {
   struct shr *shr = (struct shr *)_sp;
   shr_close(shr);
