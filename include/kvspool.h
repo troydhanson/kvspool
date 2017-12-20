@@ -43,6 +43,7 @@ void kv_spoolreader_free(void*);
 
 void *kv_spoolwriter_new(const char *dir);
 int kv_spool_write(void*sp, void *set);
+int kv_spool_writeN(void *sp, void **setv, int nset);
 void kv_spoolwriter_free(void*);
 
 /******************************************************************************

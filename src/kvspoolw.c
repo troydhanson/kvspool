@@ -62,6 +62,50 @@ int kv_spool_write(void*_sp, void *_set) {
   return rc;
 }
 
+int kv_spool_writeN(void *_sp, void **_setv, int nset) {
+  struct shr *shr = (struct shr *)_sp;
+  kvset_t **setv = (kvset_t**)_setv;
+  struct iovec *iov=NULL;
+  tpl_node *tn = NULL;
+  int i, rc = -1, sc;
+  char *key, *val;
+
+  iov = malloc(sizeof(struct iovec) * nset);
+  if (iov == NULL) {
+    fprintf(stderr, "out of memory\n");
+    goto done;
+  }
+
+
+  for(i=0; i < nset; i++) {
+    tn = tpl_map("A(ss)", &key, &val);
+    kv_t *kv = NULL;
+    while ( (kv = kv_next(setv[i], kv))) {
+      key = kv->key;
+      val = kv->val;
+      tpl_pack(tn,1);
+    }
+    tpl_dump(tn, TPL_MEM, &iov[i].iov_base, &iov[i].iov_len);
+    tpl_free(tn);
+    tn = NULL;
+  }
+
+  sc = shr_writev(shr, iov, nset);
+  if (sc <= 0) {
+    fprintf(stderr, "shr_writev: error\n");
+    goto done;
+  }
+  
+  rc = 0;
+ 
+ done:
+  if (iov) {
+    for(i=0; i < nset; i++) free(iov[i].iov_base);
+    free(iov);
+  }
+  return rc;
+}
+
 void kv_spoolwriter_free(void*_sp) {
   struct shr *shr = (struct shr *)_sp;
   shr_close(shr);

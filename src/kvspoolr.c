@@ -90,7 +90,7 @@ int kv_spool_readN(void *_sp, void **_setv, int *nset) {
   struct iovec iov[iovcnt];
   *nset = 0;
 
-  int tmpsz = 1024*1024;
+  int tmpsz = 10*1024*1024;
   tmp = malloc(tmpsz);
   if (tmp == NULL) {
     fprintf(stderr, "out of memory\n");
