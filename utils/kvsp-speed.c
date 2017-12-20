@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
 
   /* init the spool */
   snprintf(path, PATH_MAX, "%s/%s", dir, "data");
-  sc = shr_init(path, 10*1024*1024, SHR_OVERWRITE|SHR_MESSAGES|SHR_DROP);
+  sc = shr_init(path, frames*1000, SHR_OVERWRITE|SHR_MESSAGES|SHR_DROP);
   if (sc < 0) goto done;
 
   sc = individual_frames_test();
