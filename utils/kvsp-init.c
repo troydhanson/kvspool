@@ -57,6 +57,10 @@ int main(int argc, char * argv[]) {
     snprintf(path, PATH_MAX, "%s/%s", dir, "data");
     sc = shr_init(path, dirmax, SHR_KEEPEXIST|SHR_MESSAGES|SHR_DROP);
     if (sc < 0) goto done;
+    sc = chmod(path, 0666);
+    if (sc < 0) {
+      fprintf(stderr, "chmod: %s\n", strerror(errno));
+    }
   }
 
   rc = 0;
