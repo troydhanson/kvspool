@@ -83,7 +83,10 @@ int main(int argc, char *argv[]) {
   }
   if (remotes_file) if (read_lines(remotes_file,endpoints)) goto done;
   while (optind < argc) utarray_push_back(endpoints,&argv[optind++]);
-  if (utarray_len(endpoints) == 0) usage(argv[0]);
+  if (utarray_len(endpoints) == 0) {
+    fprintf(stderr, "%s: no remotes\n", argv[0]);
+    goto done;
+  }
   if (spool == NULL) usage(argv[0]);
   if (parse_config(config_file) < 0) goto done;
   if ( !(sp = kv_spoolreader_new(spool))) goto done;
