@@ -86,7 +86,7 @@ int kv_spool_readN(void *_sp, void **_setv, int *nset) {
   char *tmp=NULL;
 
   int i;
-  int iovcnt = *nset;
+  size_t iovcnt = *nset;
   struct iovec iov[iovcnt];
   *nset = 0;
 
@@ -131,6 +131,7 @@ int kv_stat(const char *dir, kv_stat_t *stats) {
   }
 
   shr = shr_open(path, SHR_RDONLY);
+  if (shr == NULL) goto done;
   if (shr_stat(shr, &s, NULL) < 0) goto done;
 
   stats->pct_consumed = 100 - ((100.0 * s.bu) / s.bn);
