@@ -1,3 +1,5 @@
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
@@ -48,6 +50,7 @@ int main(int argc, char * argv[]) {
   }
   if (optind >= argc) usage(argv[0]);
   if (!dirmax) usage(argv[0]);
+  umask(0);
 
   while (optind < argc) {
     dir = argv[optind++];
