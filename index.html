@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>kvspool data stream tools</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -435,7 +436,7 @@ thead, p.table.header {
 p.table {
   margin-top: 0;
 }
-/* Because the table frame attribute is overriden by CSS in most browsers. */
+/* Because the table frame attribute is overridden by CSS in most browsers. */
 div.tableblock > table[frame="void"] {
   border-style: none;
 }
@@ -780,6 +781,7 @@ asciidoc.install(2);
 <div class="sectionbody">
 <div class="paragraph"><p>Back to the <a href="https://github.com/troydhanson/kvspool">kvspool Github page</a>.  Back to
 <a href="http://troydhanson.github.io">my other software</a>.</p></div>
+<div class="paragraph"><p><strong>This library is deprecated.</strong></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 kv-spool ("key-value" spool)
@@ -899,7 +901,7 @@ The reader and writer are completely uninvolved in the replication process.</p><
 <img src="pub-sub.png" alt="Publish and Subscribe" />
 </span></p></div>
 <div class="paragraph"><p>You can run <code>kvsp-sub</code> and <code>kvsp-pub</code> in the background at system boot by setting
-them up as services or <a href="http://troydhanson.github.com/pmtr/">pmtr</a> jobs.</p></div>
+them up as services or <a href="http://troydhanson.github.io/pmtr/">pmtr</a> jobs.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_license">License</h3>
@@ -1085,7 +1087,10 @@ These data types may appear in <code>cast.cfg</code></p></div>
 i16       //  short (16-bit int)
 i32       //  integer (32-bit int)
 ipv4      //  dotted quad IP address
+ipv46     //  IPv4 or IPv6 address
+mac       //  MAC address (aa:bb:cc:dd:ee:ff)
 str       //  string
+str8      //  string (max length 255)
 d64       //  double (64-bit float)</code></pre>
 </div></div>
 </div>
@@ -1171,9 +1176,9 @@ convenient to locate a spool on a ramdisk for performance.</p></div>
 <div class="sect1">
 <h2 id="_api">API</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>C programs must be linked with -lkvspool.</p></div>
+<div class="paragraph"><p>C programs must be linked with -lkvspool -lshr.</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+<div class="content"><!-- Generator: GNU source-highlight
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
@@ -1202,7 +1207,7 @@ set to stderr using <code>kv_set_dump(set,stderr)</code>.</p></div>
 <div class="paragraph"><p>To open a spool for reading, call <code>kv_spoolreader_new</code> which takes the spool directory and
 returns an opaque handle to the spool.  Then call <code>kv_spool_read</code> to read the spool.</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+<div class="content"><!-- Generator: GNU source-highlight
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
@@ -1215,7 +1220,7 @@ spool and it&#8217;s been populated into the set).  A zero value means that non-
 was used, but no data is currently available in the spool.</p></div>
 <div class="paragraph"><p>A C program can iterate through all the key-value pairs in the result set like this:</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+<div class="content"><!-- Generator: GNU source-highlight
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
@@ -1248,7 +1253,7 @@ has the spool open at the time. It takes the spool directory as its only argumen
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-06-26 14:09:22 EDT
+ 2021-03-01 22:20:59 UTC
 </div>
 </div>
 </body>
