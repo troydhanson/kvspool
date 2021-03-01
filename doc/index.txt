@@ -5,6 +5,8 @@ Troy D. Hanson <tdh@tkhanson.net>
 Back to the https://github.com/troydhanson/kvspool[kvspool Github page].  Back to
 http://troydhanson.github.io[my other software].
 
+*This library is deprecated.*
+
 kv-spool ("key-value" spool):: 
          a Linux-based C library to stream data between programs as key-value dictionaries. 
          It has tools to pipe the streams around, such as by network pub/sub or tee, to 
@@ -114,7 +116,7 @@ The reader and writer are completely uninvolved in the replication process.
 image:pub-sub.png[Publish and Subscribe]
 
 You can run `kvsp-sub` and `kvsp-pub` in the background at system boot by setting
-them up as services or http://troydhanson.github.com/pmtr/[pmtr] jobs.
+them up as services or http://troydhanson.github.io/pmtr/[pmtr] jobs.
 
 License
 ~~~~~~~
